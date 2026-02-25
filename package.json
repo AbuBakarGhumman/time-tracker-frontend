@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://abubakarghumman.github.io/time-tracker-frontend/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
