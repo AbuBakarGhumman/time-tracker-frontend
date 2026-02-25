@@ -6,7 +6,8 @@
  * - Server-driven cache invalidation via version/hash
  * - Return early when cache is valid to reduce API calls
  * - Fallback to cache on offline or API errors
- * - Request deduplication to prevent duplicate API calls
+ * - Request deduplication to prevent duplicate API calls calls
+ * 
  */
 
 import React from "react";
