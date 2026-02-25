@@ -88,14 +88,13 @@ const Header: React.FC = () => {
     setUserProfile(null);
     setUserType(null);
     setDashboardLink("/dashboard");
-    navigate("/");
+    navigate("/home");
   };
-
   return (
     <header className="bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 sticky top-0 z-50 border-b border-white/10">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
+        <Link to="/home" className="flex items-center gap-3 group">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
