@@ -81,7 +81,6 @@ function App() {
           <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/time-tracker-frontend" element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<PublicLayout><Intro /></PublicLayout>} />
           <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
           <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />

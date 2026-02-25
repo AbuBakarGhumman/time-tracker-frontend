@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  //base: '/time-tracker-frontend/',   // required for GitHub Pages
+  base: '/time-tracker-frontend/',   // required for GitHub Pages
 })
