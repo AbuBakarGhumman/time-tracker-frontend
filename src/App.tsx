@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { UserProvider } from "./context/UserContext";
 import Header from "./components/Header";
@@ -28,10 +28,10 @@ import PrivacyPolicy from "./pages/site/PrivacyPolicy";
 import TermsOfService from "./pages/site/TermsOfService";
 
 // Company role-based dashboards
-import AdminDashboard    from "./pages/company/admin/AdminDashboard";
-import HRDashboard       from "./pages/company/hr/HrDashboard";
-import ManagerDashboard  from "./pages/company/manager/ManagerDashboard";
-import TeamDashboard     from "./pages/company/teamlead/TeamLeadDashboard";
+import AdminDashboard from "./pages/company/admin/AdminDashboard";
+import HRDashboard from "./pages/company/hr/HrDashboard";
+import ManagerDashboard from "./pages/company/manager/ManagerDashboard";
+import TeamDashboard from "./pages/company/teamlead/TeamLeadDashboard";
 import EmployeeDashboard from "./pages/company/employee/EmployeeDashboard";
 
 import { getStoredToken } from "./api/auth";
@@ -69,47 +69,47 @@ const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 function App() {
   // Initialize auth state on app load - restores token from either localStorage or sessionStorage
   useDetectPageRefresh();
-  
+
   useEffect(() => {
     // Auth initialization handled by api/interceptor
   }, []);
 
   return (
     <UserProvider>
-      <Router>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen flex flex-col">
           <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/home" element={<PublicLayout><Intro /></PublicLayout>} />
-          <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
-          <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
+            {/* Public Routes */}
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<PublicLayout><Intro /></PublicLayout>} />
+            <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
+            <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
 
-          <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
-          <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
-          <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+            <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+            <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
+            <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
 
-          {/* Protected Routes - Individual Dashboard */}
-          <Route path="/dashboard"     element={<ProtectedRoute element={<DashboardLayout><Home /></DashboardLayout>} />} />
-          <Route path="/time-tracker"  element={<ProtectedRoute element={<DashboardLayout><TimeTracker /></DashboardLayout>} />} />
-          <Route path="/analytics"     element={<ProtectedRoute element={<DashboardLayout><Analytics /></DashboardLayout>} />} />
-          <Route path="/reports"       element={<ProtectedRoute element={<DashboardLayout><Reports /></DashboardLayout>} />} />
-          <Route path="/projects"      element={<ProtectedRoute element={<DashboardLayout><Projects /></DashboardLayout>} />} />
-          <Route path="/profile"       element={<ProtectedRoute element={<DashboardLayout><Profile /></DashboardLayout>} />} />
-          <Route path="/settings"      element={<ProtectedRoute element={<DashboardLayout><Settings /></DashboardLayout>} />} />
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute element={<DashboardLayout><Home /></DashboardLayout>} />} />
+            <Route path="/time-tracker" element={<ProtectedRoute element={<DashboardLayout><TimeTracker /></DashboardLayout>} />} />
+            <Route path="/analytics" element={<ProtectedRoute element={<DashboardLayout><Analytics /></DashboardLayout>} />} />
+            <Route path="/reports" element={<ProtectedRoute element={<DashboardLayout><Reports /></DashboardLayout>} />} />
+            <Route path="/projects" element={<ProtectedRoute element={<DashboardLayout><Projects /></DashboardLayout>} />} />
+            <Route path="/profile" element={<ProtectedRoute element={<DashboardLayout><Profile /></DashboardLayout>} />} />
+            <Route path="/settings" element={<ProtectedRoute element={<DashboardLayout><Settings /></DashboardLayout>} />} />
 
-          {/* Protected Routes - Company Role Dashboards */}
-          <Route path="/company/admin-dashboard"    element={<ProtectedRoute element={<AdminDashboard />} />} />
-          <Route path="/company/hr-dashboard"       element={<ProtectedRoute element={<HRDashboard />} />} />
-          <Route path="/company/manager-dashboard"  element={<ProtectedRoute element={<ManagerDashboard />} />} />
-          <Route path="/company/team-dashboard"     element={<ProtectedRoute element={<TeamDashboard />} />} />
-          <Route path="/company/employee-dashboard" element={<ProtectedRoute element={<EmployeeDashboard />} />} />
+            {/* Company Dashboards */}
+            <Route path="/company/admin-dashboard" element={<ProtectedRoute element={<AdminDashboard />} />} />
+            <Route path="/company/hr-dashboard" element={<ProtectedRoute element={<HRDashboard />} />} />
+            <Route path="/company/manager-dashboard" element={<ProtectedRoute element={<ManagerDashboard />} />} />
+            <Route path="/company/team-dashboard" element={<ProtectedRoute element={<TeamDashboard />} />} />
+            <Route path="/company/employee-dashboard" element={<ProtectedRoute element={<EmployeeDashboard />} />} />
 
-          {/* Optional: 404 fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
-      </Router>
+            {/* 404 */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
     </UserProvider>
   );
 }
