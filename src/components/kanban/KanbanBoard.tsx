@@ -123,7 +123,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     };
 
     const handleColumnUpdated = (columnId: number, updates: { name: string; column_type: string; color: string }) => {
-        setColumns((prev) => prev.map((c) => (c.id === columnId ? { ...c, ...updates } : c)));
+        setColumns((prev) => prev.map((c) => (c.id === columnId ? { ...c, ...updates } as ColumnType : c)));
     };
 
     const handleAddColumn = async () => {
