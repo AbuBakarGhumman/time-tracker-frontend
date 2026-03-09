@@ -10,6 +10,7 @@ import {
     type MemberRole,
     type PendingInvitation,
 } from '../api/projectMembers';
+import { API_BASE_URL } from '../api/config';
 
 interface Project {
     id: number;
@@ -282,9 +283,17 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose, isOwne
                                     return (
                                         <li key={m.user_id} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
                                             <div className="flex items-center gap-3 min-w-0">
+                                                {m.profile_pic_url ? (
+                                                    <img
+                                                        src={`${API_BASE_URL}${m.profile_pic_url}`}
+                                                        alt={m.full_name}
+                                                        className="w-9 h-9 rounded-full object-cover shrink-0"
+                                                    />
+                                                ) : (
                                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
                                                     {m.full_name.charAt(0).toUpperCase()}
                                                 </div>
+                                                )}
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800 truncate">{m.full_name}</p>
                                                     <p className="text-xs text-slate-500 truncate">{m.email}</p>

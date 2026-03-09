@@ -19,7 +19,7 @@ import {
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
-import { updateTask, updateColumn, createColumn } from '../../api/boards';
+import { updateTask, updateColumn, createColumn, invalidateBoardCache } from '../../api/boards';
 import type { BoardColumn as ColumnType, Task } from '../../api/boards';
 
 // ── ID helpers ────────────────────────────────────────────────────────────────
@@ -70,8 +70,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const lastOverId = useRef<UniqueIdentifier | null>(null);
     const recentlyMovedToNewContainer = useRef(false);
+    // dragTypeRef mirrors dragType state — always current in event handlers (React 18 state closures are stale)
+    const dragTypeRef = useRef<DragType>(null);
+    // taskColumnsRef tracks each task's current visual column_id, updated synchronously in onDragOver.
+    // Never reads from stale React state closures.
+    const taskColumnsRef = useRef<Map<number, number>>(new Map(initialTasks.map(t => [t.id, t.column_id])));
 
-    useEffect(() => { setColumns(initialColumns); setTasks(initialTasks); }, [initialColumns, initialTasks]);
+    useEffect(() => {
+        taskColumnsRef.current = new Map(initialTasks.map(t => [t.id, t.column_id]));
+        setColumns(initialColumns);
+        setTasks(initialTasks);
+    }, [initialColumns, initialTasks]);
 
     // Prefixed ID arrays for SortableContext
     const columnsIds = useMemo(() => columns.map((c) => colId(c.id)), [columns]);
@@ -84,7 +93,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     // ── CUSTOM COLLISION DETECTION ────────────────────────────────────────────
     const collisionDetection: CollisionDetection = useCallback(
         (args) => {
-            if (dragType === 'column') {
+            if (dragTypeRef.current === 'column') {
                 // Only consider column droppables
                 return closestCenter({
                     ...args,
@@ -158,7 +167,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         setAddingCol(false);
     };
 
-    const handleTaskCreated = (task: Task) => setTasks((prev) => [...prev, task]);
+    const handleTaskCreated = (task: Task) => {
+        taskColumnsRef.current.set(task.id, task.column_id);
+        setTasks((prev) => [...prev, task]);
+    };
     const handleTaskDeleted = (taskId: number) => setTasks((prev) => prev.filter((t) => t.id !== taskId));
 
     // ── DRAG HANDLERS ─────────────────────────────────────────────────────────
@@ -167,22 +179,43 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         recentlyMovedToNewContainer.current = false;
         if (isColId(active.id)) {
             const col = columns.find((c) => c.id === parseColId(active.id)) ?? null;
+            dragTypeRef.current = 'column';
             setDragType('column');
             setActiveColumn(col);
         } else if (isTaskId(active.id)) {
             const task = tasks.find((t) => t.id === parseTaskId(active.id)) ?? null;
+            dragTypeRef.current = 'task';
             setDragType('task');
             setActiveTask(task);
         }
     };
 
     const onDragOver = ({ active, over }: DragOverEvent) => {
-        if (!over || active.id === over.id || dragType !== 'task') return;
+        if (!over || active.id === over.id || dragTypeRef.current !== 'task') return;
 
         const activeNumId = parseTaskId(active.id);
         const overIsTask = isTaskId(over.id);
         const overIsCol = isColId(over.id);
 
+        // Update taskColumnsRef synchronously — never relies on stale React state closures
+        if (overIsTask) {
+            const overNumId = parseTaskId(over.id);
+            const activeCol = taskColumnsRef.current.get(activeNumId);
+            const overCol   = taskColumnsRef.current.get(overNumId);
+            if (activeCol !== undefined && overCol !== undefined && activeCol !== overCol) {
+                taskColumnsRef.current.set(activeNumId, overCol);
+                recentlyMovedToNewContainer.current = true;
+            }
+        } else if (overIsCol) {
+            const newColNum = parseColId(over.id);
+            const activeCol = taskColumnsRef.current.get(activeNumId);
+            if (activeCol !== undefined && activeCol !== newColNum) {
+                taskColumnsRef.current.set(activeNumId, newColNum);
+                recentlyMovedToNewContainer.current = true;
+            }
+        }
+
+        // Visual update via state updater (gets true latest prev)
         setTasks((prev) => {
             const activeIdx = prev.findIndex((t) => t.id === activeNumId);
             if (activeIdx === -1) return prev;
@@ -190,20 +223,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             if (overIsTask) {
                 const overNumId = parseTaskId(over.id);
                 const overIdx = prev.findIndex((t) => t.id === overNumId);
+                if (overIdx === -1) return prev;
                 const updated = [...prev];
                 if (updated[activeIdx].column_id !== updated[overIdx].column_id) {
-                    recentlyMovedToNewContainer.current = true;
                     updated[activeIdx] = { ...updated[activeIdx], column_id: updated[overIdx].column_id };
                 }
                 return arrayMove(updated, activeIdx, overIdx);
             }
 
             if (overIsCol) {
-                const newColId = parseColId(over.id);
-                if (prev[activeIdx].column_id === newColId) return prev;
-                recentlyMovedToNewContainer.current = true;
+                const newColNum = parseColId(over.id);
+                if (prev[activeIdx].column_id === newColNum) return prev;
                 const updated = [...prev];
-                updated[activeIdx] = { ...updated[activeIdx], column_id: newColId };
+                updated[activeIdx] = { ...updated[activeIdx], column_id: newColNum };
                 return arrayMove(updated, activeIdx, activeIdx);
             }
 
@@ -212,35 +244,42 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     };
 
     const onDragEnd = ({ active, over }: DragEndEvent) => {
-        const type = dragType;
+        const type = dragTypeRef.current;
+        dragTypeRef.current = null;
         setDragType(null);
         setActiveColumn(null);
         setActiveTask(null);
 
-        if (!over || active.id === over.id) return;
-
+        // Column reorder: uses over.id (column IDs are reliable)
         if (type === 'column') {
+            if (!over || active.id === over.id) return;
             setColumns((prev) => {
                 const from = prev.findIndex((c) => colId(c.id) === active.id);
                 const to = prev.findIndex((c) => colId(c.id) === over.id);
                 if (from === -1 || to === -1) return prev;
                 const next = arrayMove(prev, from, to);
-                next.forEach((col, idx) => {
-                    if (col.order !== idx) updateColumn(projectId, col.id, { order: idx }).catch(console.error);
-                });
+                const updates = next.filter((col, idx) => col.order !== idx);
+                if (updates.length > 0) {
+                    Promise.all(updates.map((col) => {
+                        const idx = next.indexOf(col);
+                        return updateColumn(projectId, col.id, { order: idx });
+                    })).then(() => invalidateBoardCache(projectId)).catch(console.error);
+                }
                 return next.map((col, idx) => ({ ...col, order: idx }));
             });
         }
 
+        // Task move: read the dragged task's current column directly from taskColumnsRef.
+        // Never uses over.id for column resolution — collision detection can return stale/wrong IDs.
         if (type === 'task') {
-            const numId = parseTaskId(active.id);
-            const moved = tasks.find((t) => t.id === numId);
-            if (moved) {
-                const finalOrder = tasks.filter((t) => t.column_id === moved.column_id).findIndex((t) => t.id === numId);
-                updateTask(projectId, numId, {
-                    column_id: moved.column_id,
-                    order: finalOrder >= 0 ? finalOrder : 0,
-                }).catch(console.error);
+            if (!over) return; // cancelled drag (e.g. Escape key)
+            const activeNumId = parseTaskId(active.id);
+            const targetColId = taskColumnsRef.current.get(activeNumId);
+            if (targetColId !== undefined) {
+                updateTask(projectId, activeNumId, {
+                    column_id: targetColId,
+                    order: 0,
+                }).then(() => invalidateBoardCache(projectId)).catch(console.error);
             }
         }
     };

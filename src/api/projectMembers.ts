@@ -7,6 +7,7 @@ export interface ProjectMember {
     full_name: string;
     role: string;
     invited_at: string;
+    profile_pic_url?: string | null;
 }
 
 export const fetchMembers = async (projectId: number): Promise<ProjectMember[]> => {

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { fetchBoard } from "../../api/boards";
 import type { BoardView, Task, BoardColumn } from "../../api/boards";
 import { KanbanBoard } from "../../components/kanban/KanbanBoard";
+import { KanbanList } from "../../components/kanban/KanbanList";
 import { TaskDetailPanel } from "../../components/kanban/TaskDetailPanel";
 import axios from "../../api/interceptor";
 import { API_BASE_URL } from "../../api/config";
@@ -14,6 +15,7 @@ const ProjectBoard: React.FC = () => {
     const [board, setBoard] = useState<BoardView | null>(null);
     const [projectName, setProjectName] = useState<string>("");
     const [triggerAddColumn, setTriggerAddColumn] = useState(false);
+    const [view, setView] = useState<'board' | 'list'>('board');
     const [loading, setLoading] = useState(true);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -100,31 +102,63 @@ const ProjectBoard: React.FC = () => {
         <div className="relative flex flex-col h-[calc(100vh-100px)] overflow-hidden">
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 shrink-0">
-                <div className="px-6 py-2 rounded-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-                    {projectName ? `${projectName} Board` : "Board"}
-                </div>
-                <div className="flex-1" />
+                {/* Board tab */}
                 <button
-                    onClick={() => setTriggerAddColumn(true)}
-                    className="flex items-center gap-2 px-5 py-2 rounded-lg font-semibold transition-all duration-200 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                    onClick={() => setView('board')}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
+                        view === 'board'
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add Column
+                    {projectName ? `${projectName} Board` : "Board"}
                 </button>
+
+                {/* List tab */}
+                <button
+                    onClick={() => setView('list')}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
+                        view === 'list'
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                >
+                    {projectName ? `${projectName} List` : "List"}
+                </button>
+
+                <div className="flex-1" />
+
+                {view === 'board' && (
+                    <button
+                        onClick={() => setTriggerAddColumn(true)}
+                        className="flex items-center gap-2 px-5 py-2 rounded-lg font-semibold transition-all duration-200 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Column
+                    </button>
+                )}
             </div>
 
-            {/* Board */}
-            <div className="flex-1 overflow-hidden bg-slate-100 h-full">
-                <KanbanBoard
-                    projectId={projectId}
-                    initialColumns={board.columns}
-                    initialTasks={board.tasks}
-                    onTaskClick={openTask}
-                    openAddColumn={triggerAddColumn}
-                    onAddColumnConsumed={() => setTriggerAddColumn(false)}
-                />
+            {/* Board / List view */}
+            <div className={`flex-1 bg-slate-100 h-full ${view === 'board' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                {view === 'board' ? (
+                    <KanbanBoard
+                        projectId={projectId}
+                        initialColumns={board.columns}
+                        initialTasks={board.tasks}
+                        onTaskClick={openTask}
+                        openAddColumn={triggerAddColumn}
+                        onAddColumnConsumed={() => setTriggerAddColumn(false)}
+                    />
+                ) : (
+                    <KanbanList
+                        columns={board.columns}
+                        tasks={board.tasks}
+                        onTaskClick={openTask}
+                    />
+                )}
             </div>
 
             {/* Task Detail Slide-in Panel */}

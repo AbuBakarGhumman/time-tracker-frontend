@@ -1,3 +1,140 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Slate Dark Mode  (matches NotificationBell dropdown palette)
+   Palette:
+     Page bg        #0f172a   (slate-900)
+     Card / surface #1e293b   (slate-800)
+     Elevated       #334155   (slate-700)
+     Border         #334155   (slate-700)
+     Border muted   #475569   (slate-600)
+     Text primary   #f8fafc   (slate-50)
+     Text secondary #cbd5e1   (slate-300)
+     Text muted     #94a3b8   (slate-400)
+     Text faint     #64748b   (slate-500)
+     Blue accent    #60a5fa   (blue-400)
+     Green          #4ade80   (green-400)
+     Red            #f87171   (red-400)
+     Amber          #fbbf24   (amber-400)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Document-level — ensures the page background itself is dark ── */
+.dark,
+.dark body { background-color: #0f172a; color: #f8fafc; }
+
+/* ── Page / layout backgrounds ── */
+.dark .min-h-screen   { background-color: #0f172a; }
+.dark .bg-slate-50    { background-color: #0f172a; }
+.dark .bg-slate-100   { background-color: #1e293b; }
+.dark .bg-white       { background-color: #1e293b; }
+.dark .bg-slate-200   { background-color: #334155; }
+.dark .bg-slate-300   { background-color: #475569; }
+
+/* Frosted-glass variants used on public pages (e.g. bg-white/80) */
+.dark .bg-white\/80   { background-color: rgba(30, 41, 59, 0.92) !important; }
+.dark .bg-white\/70   { background-color: rgba(30, 41, 59, 0.85) !important; }
+.dark .bg-white\/50   { background-color: rgba(30, 41, 59, 0.7)  !important; }
+
+/* ── Text ── */
+.dark .text-slate-900  { color: #ffffff; }
+.dark .text-slate-800  { color: #f1f5f9; }
+.dark .text-slate-700  { color: #e2e8f0; }
+.dark .text-slate-600  { color: #cbd5e1; }
+.dark .text-slate-500  { color: #94a3b8; }
+.dark .text-slate-400  { color: #64748b; }
+
+/* ── Borders ── */
+.dark .border-slate-100 { border-color: #334155; }
+.dark .border-slate-200 { border-color: #334155; }
+.dark .border-slate-300 { border-color: #475569; }
+.dark .border-white\/20 { border-color: rgba(51, 65, 85, 0.6) !important; }
+
+/* ── Shadows ── */
+.dark .shadow-sm  { box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.dark .shadow-md  { box-shadow: 0 4px 8px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.5); }
+.dark .shadow-lg  { box-shadow: 0 8px 20px rgba(0,0,0,0.7); }
+.dark .shadow-xl  { box-shadow: 0 16px 32px rgba(0,0,0,0.7); }
+.dark .shadow-2xl { box-shadow: 0 24px 48px rgba(0,0,0,0.8); }
+
+/* ── Native form controls ── */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dark textarea,
+.dark select {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #64748b; }
+.dark input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus { border-color: #60a5fa; outline: none; }
+
+/* ── Interactive hover states ── */
+.dark .hover\:bg-white\/10:hover { background-color: rgba(255,255,255,0.08) !important; }
+.dark .hover\:bg-slate-50:hover   { background-color: #1e293b; }
+.dark .hover\:bg-slate-100:hover  { background-color: #334155; }
+.dark .hover\:bg-slate-200:hover  { background-color: #475569; }
+.dark .hover\:bg-slate-300:hover  { background-color: #4b5563; }
+.dark .hover\:bg-blue-50:hover    { background-color: #1e3a5f; }
+.dark .hover\:bg-blue-100:hover   { background-color: #1e3a5f; }
+.dark .hover\:bg-red-50:hover     { background-color: #3b1a1a; }
+.dark .hover\:bg-red-500\/10:hover { background-color: rgba(248, 113, 113, 0.1) !important; }
+
+/* ── Accent "light" background tints ── */
+.dark .bg-blue-50    { background-color: #1e3a5f; }
+.dark .bg-blue-100   { background-color: #1e3a5f; }
+.dark .bg-green-50   { background-color: #14532d; }
+.dark .bg-green-100  { background-color: #14532d; }
+.dark .bg-red-50     { background-color: #3b1a1a; }
+.dark .bg-red-100    { background-color: #450a0a; }
+.dark .bg-amber-50   { background-color: #3b2700; }
+.dark .bg-orange-50  { background-color: #3b1e00; }
+.dark .bg-purple-50  { background-color: #2e1065; }
+.dark .bg-slate-50\/50 { background-color: rgba(15, 23, 42, 0.5); }
+
+/* ── Accent text (keep readable on dark surfaces) ── */
+.dark .text-blue-600   { color: #60a5fa; }
+.dark .text-blue-700   { color: #60a5fa; }
+.dark .text-green-600  { color: #4ade80; }
+.dark .text-green-700  { color: #4ade80; }
+.dark .text-red-600    { color: #f87171; }
+.dark .text-red-700    { color: #f87171; }
+.dark .text-amber-700  { color: #fbbf24; }
+.dark .text-orange-700 { color: #fb923c; }
+.dark .text-purple-700 { color: #c084fc; }
+
+/* ── Accent borders ── */
+.dark .border-blue-200   { border-color: #1e3a5f; }
+.dark .border-blue-300   { border-color: #1d4ed8; }
+.dark .border-green-200  { border-color: #14532d; }
+.dark .border-red-200    { border-color: #7f1d1d; }
+.dark .border-amber-200  { border-color: #78350f; }
+.dark .border-orange-200 { border-color: #7c2d12; }
+.dark .border-purple-200 { border-color: #3b0764; }
+
+/* ── Badge color overrides (inline bg pills) ── */
+.dark .bg-blue-100.text-blue-700   { background-color: #1e3a5f !important; color: #60a5fa !important; }
+.dark .bg-green-100.text-green-700 { background-color: #14532d !important; color: #4ade80 !important; }
+.dark .bg-red-100.text-red-700     { background-color: #3b1a1a !important; color: #f87171 !important; }
+.dark .bg-amber-100.text-amber-700 { background-color: #3b2700 !important; color: #fbbf24 !important; }
+.dark .bg-purple-100.text-purple-700 { background-color: #2e1065 !important; color: #c084fc !important; }
+.dark .bg-slate-100.text-slate-600 { background-color: #334155 !important; color: #94a3b8 !important; }
+
+/* ── Scrollbar ── */
+.dark ::-webkit-scrollbar        { width: 6px; height: 6px; }
+.dark ::-webkit-scrollbar-track  { background: #0f172a; }
+.dark ::-webkit-scrollbar-thumb  { background: #334155; border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* ── Transition on theme switch ── */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+/* Disable transition on elements that shouldn't flash */
+.no-transition, .no-transition * { transition: none !important; }

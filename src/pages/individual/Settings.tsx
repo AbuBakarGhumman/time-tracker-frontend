@@ -7,12 +7,14 @@ import CacheManager from "../../utils/cacheManager";
 import type { User } from "../../api/auth";
 import AnalogClockIcon from "../../components/AnalogClockIcon";
 import { setStoredTimezone } from "../../utils/dateUtils";
+import { useTheme } from "../../context/ThemeContext";
+import type { ThemeChoice } from "../../context/ThemeContext";
 
 interface Settings {
   enable_notifications: boolean;
   daily_digest: boolean;
   email_alerts: boolean;
-  theme: "light" | "dark";
+  theme: ThemeChoice;
   working_hours_start: string;
   working_hours_end: string;
   timezone: string;
@@ -20,6 +22,7 @@ interface Settings {
 }
 
 const Settings: React.FC = () => {
+  const { setTheme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -60,6 +63,7 @@ const Settings: React.FC = () => {
         if (cachedSettings) {
           setSettings(cachedSettings);
           if (cachedSettings.timezone) setStoredTimezone(cachedSettings.timezone);
+          if (cachedSettings.theme) setTheme(cachedSettings.theme as ThemeChoice);
           return; // Don't fetch if cache is still valid
         }
       }
@@ -69,6 +73,7 @@ const Settings: React.FC = () => {
       CacheManager.set("users/settings", res.data, {});
       setSettings(res.data);
       if (res.data?.timezone) setStoredTimezone(res.data.timezone);
+      if (res.data?.theme) setTheme(res.data.theme as ThemeChoice);
     } catch (error) {
       console.error("Failed to load settings:", error);
     } finally {
@@ -88,6 +93,7 @@ const Settings: React.FC = () => {
       // Update cache with new settings and persist timezone for all date utils
       CacheManager.set("users/settings", settings, {});
       if (settings.timezone) setStoredTimezone(settings.timezone);
+      if (settings.theme) setTheme(settings.theme as ThemeChoice);
       setSaveMessage("Settings saved successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (error: any) {
@@ -278,18 +284,6 @@ const Settings: React.FC = () => {
             </h2>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Theme</label>
-                <select
-                  value={settings.theme}
-                  onChange={(e) => handleSettingChange("theme", e.target.value as "light" | "dark")}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Timezone</label>
                 <select

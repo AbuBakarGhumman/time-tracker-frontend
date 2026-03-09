@@ -26,6 +26,9 @@ export interface Task {
   due_date: string | null;
   order: number;
   is_completed: boolean;
+  assigned_to_id: number | null;
+  assigned_to_name: string | null;
+  assigned_to_avatar: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -67,13 +70,22 @@ export interface UpdateTaskPayload {
   due_date?: string | null;
   order?: number;
   is_completed?: boolean;
+  assigned_to_id?: number | null;
+}
+
+export interface Assignee {
+  user_id: number;
+  full_name: string;
+  email: string;
+  role: string;
+  profile_pic_url: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API CALLS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// BOARD CACHE � 30-second in-memory cache
+// BOARD CACHE � 30-second in-memory cache
 const _boardCache = new Map<number, { data: BoardView; ts: number }>();
 const BOARD_TTL = 30_000;
 export const invalidateBoardCache = (projectId: number) => _boardCache.delete(projectId);
@@ -144,5 +156,35 @@ export const deleteTask = async (projectId: number, taskId: number): Promise<voi
     await axios.delete(`${API_BASE_URL}/boards/${projectId}/tasks/${taskId}`);
   } catch (error: any) {
     throw new Error(error?.response?.data?.detail || "Failed to delete task");
+  }
+};
+
+export interface TaskActivity {
+  id: number;
+  task_id: number;
+  user_id: number | null;
+  user_name: string | null;
+  action: string;
+  detail: string | null;
+  from_column: string | null;
+  to_column: string | null;
+  created_at: string;
+}
+
+export const fetchTaskActivity = async (projectId: number, taskId: number): Promise<TaskActivity[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/boards/${projectId}/tasks/${taskId}/activity`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.detail || "Failed to fetch task activity");
+  }
+};
+
+export const fetchProjectAssignees = async (projectId: number): Promise<Assignee[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/boards/${projectId}/assignees`);
+    return response.data;
+  } catch (error: any) {
+    return [];
   }
 };

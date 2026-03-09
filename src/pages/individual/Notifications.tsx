@@ -261,12 +261,11 @@ const Notifications: React.FC = () => {
               const meta = TYPE_META[n.type] ?? TYPE_META.info;
               const isPending =
                 n.type === "project_invitation" &&
-                !n.is_read &&
                 n.data?.status !== "accepted" &&
                 n.data?.status !== "declined";
               const isActed =
                 n.type === "project_invitation" &&
-                (n.is_read || n.data?.status === "accepted" || n.data?.status === "declined");
+                (n.data?.status === "accepted" || n.data?.status === "declined");
 
               const isHighlighted = highlightId === n.id;
 
@@ -274,7 +273,7 @@ const Notifications: React.FC = () => {
                 <div
                   key={n.id}
                   id={`notif-${n.id}`}
-                  onClick={() => handleMarkRead(n)}
+                  onClick={() => { if (!isPending) handleMarkRead(n); }}
                   className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-500 ${
                     isHighlighted
                       ? "bg-blue-100 border-blue-500 shadow-md shadow-blue-300/50 ring-2 ring-blue-400/40"

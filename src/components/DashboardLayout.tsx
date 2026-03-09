@@ -157,9 +157,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
+    <div className="flex flex-col h-screen bg-slate-50 dark:bg-[#0d1117] overflow-hidden">
       {/* ── TOP HEADER ─────────────────────────────────────────────────── */}
-      <header className="flex-shrink-0 bg-slate-900 border-b border-slate-800 px-[20px] h-16 flex items-center justify-between z-50">
+      <header className="flex-shrink-0 bg-slate-900 dark:bg-[#010409] border-b border-slate-800 dark:border-[#30363d] px-[20px] h-16 flex items-center justify-between z-50">
         {/* LEFT — Brand */}
         <div className="flex items-center gap-3">
           <button
@@ -242,7 +242,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         <aside
           className={`
             hidden lg:flex flex-col flex-shrink-0 relative
-            bg-slate-900 border-r border-slate-800
+            bg-slate-900 dark:bg-[#010409] border-r border-slate-800 dark:border-[#30363d]
             transition-[width] duration-300 ease-in-out overflow-hidden
             ${collapsed ? "w-16" : "w-52"}
           `}
@@ -291,7 +291,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </nav>
 
           {/* Logout */}
-          <div className="px-2 pb-3 border-t border-slate-800 pt-3">
+          <div className="px-2 pb-3 border-t border-slate-800 dark:border-[#30363d] pt-3">
             <div className="relative group">
               <button
                 onClick={handleLogout}
@@ -331,7 +331,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         {/* ── MOBILE SIDEBAR — overlay ─────────────────────────────────── */}
         <aside
           className={`
-            fixed inset-y-0 left-0 z-40 w-52 bg-slate-900 border-r border-slate-800
+            fixed inset-y-0 left-0 z-40 w-52 bg-slate-900 dark:bg-[#010409] border-r border-slate-800 dark:border-[#30363d]
             transform transition-transform duration-300 ease-in-out lg:hidden
             ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           `}
@@ -363,7 +363,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               })}
             </nav>
 
-            <div className="px-2 pt-3 border-t border-slate-800">
+            <div className="px-2 pt-3 border-t border-slate-800 dark:border-[#30363d]">
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200 text-sm font-medium"
@@ -388,7 +388,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         )}
 
         {/* ── MAIN BODY ────────────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto bg-slate-50">
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0d1117]">
           <div className="p-4">{children}</div>
         </main>
       </div>

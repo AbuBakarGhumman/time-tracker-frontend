@@ -7,6 +7,7 @@ import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { UserProvider } from "./context/UserContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import DashboardLayout from "./components/DashboardLayout";
@@ -77,6 +78,7 @@ function App() {
   }, []);
 
   return (
+    <ThemeProvider>
     <UserProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <div className="min-h-screen flex flex-col">
@@ -115,6 +117,7 @@ function App() {
         </div>
       </BrowserRouter>
     </UserProvider>
+    </ThemeProvider>
   );
 }
 
