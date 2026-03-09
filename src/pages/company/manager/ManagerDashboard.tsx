@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CompanyDashboardLayout from "../../../components/CompanyDashboardLayout";
+import { getStoredEmployee, getStoredCompany } from "../../../api/auth";
 
 const ManagerDashboard: React.FC = () => {
   const [, setEmployee] = useState<any>(null);
@@ -23,11 +24,11 @@ const ManagerDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    const e = localStorage.getItem("employee");
-    const c = localStorage.getItem("company");
+    const e = getStoredEmployee();
+    const c = getStoredCompany();
     if (!e) { navigate("/login"); return; }
-    setEmployee(JSON.parse(e));
-    if (c) setCompany(JSON.parse(c));
+    setEmployee(e);
+    if (c) setCompany(c);
   }, []);
 
   const present = teamMembers.filter(m => m.status === "present").length;

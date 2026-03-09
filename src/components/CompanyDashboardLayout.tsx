@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../api/config";
-import { logout } from "../api/auth";
+import { logout, getStoredEmployee, getStoredCompany } from "../api/auth";
 
 interface CompanyDashboardLayoutProps {
   children: React.ReactNode;
@@ -75,14 +75,14 @@ const CompanyDashboardLayout: React.FC<CompanyDashboardLayoutProps> = ({ childre
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedEmployee = localStorage.getItem("employee");
-    const storedCompany = localStorage.getItem("company");
+    const storedEmployee = getStoredEmployee();
+    const storedCompany = getStoredCompany();
     if (!storedEmployee) {
       navigate("/login");
       return;
     }
-    setEmployee(JSON.parse(storedEmployee));
-    if (storedCompany) setCompany(JSON.parse(storedCompany));
+    setEmployee(storedEmployee);
+    if (storedCompany) setCompany(storedCompany);
   }, [navigate]);
 
   // Resolve image URLs with API base URL

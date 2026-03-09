@@ -6,6 +6,7 @@ import { API_BASE_URL } from "../../api/config";
 import CacheManager from "../../utils/cacheManager";
 import type { User } from "../../api/auth";
 import AnalogClockIcon from "../../components/AnalogClockIcon";
+import { setStoredTimezone } from "../../utils/dateUtils";
 
 interface Settings {
   enable_notifications: boolean;
@@ -15,6 +16,7 @@ interface Settings {
   working_hours_start: string;
   working_hours_end: string;
   timezone: string;
+  require_task_for_time_entry: boolean;
 }
 
 const Settings: React.FC = () => {
@@ -29,6 +31,7 @@ const Settings: React.FC = () => {
     working_hours_start: "09:00",
     working_hours_end: "18:00",
     timezone: "Asia/Karachi",
+    require_task_for_time_entry: false,
   });
   const [passwordData, setPasswordData] = useState({
     current_password: "",
@@ -56,6 +59,7 @@ const Settings: React.FC = () => {
         const cachedSettings = CacheManager.get<Settings>("users/settings", {});
         if (cachedSettings) {
           setSettings(cachedSettings);
+          if (cachedSettings.timezone) setStoredTimezone(cachedSettings.timezone);
           return; // Don't fetch if cache is still valid
         }
       }
@@ -64,6 +68,7 @@ const Settings: React.FC = () => {
       const res = await axios.get(`${API_BASE_URL}/users/settings`);
       CacheManager.set("users/settings", res.data, {});
       setSettings(res.data);
+      if (res.data?.timezone) setStoredTimezone(res.data.timezone);
     } catch (error) {
       console.error("Failed to load settings:", error);
     } finally {
@@ -80,8 +85,9 @@ const Settings: React.FC = () => {
     setLoading(true);
     try {
       await axios.put(`${API_BASE_URL}/users/settings`, settings);
-      // Update cache with new settings
+      // Update cache with new settings and persist timezone for all date utils
       CacheManager.set("users/settings", settings, {});
+      if (settings.timezone) setStoredTimezone(settings.timezone);
       setSaveMessage("Settings saved successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (error: any) {
@@ -291,10 +297,87 @@ const Settings: React.FC = () => {
                   onChange={(e) => handleSettingChange("timezone", e.target.value)}
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 >
-                  <option value="Asia/Karachi">Asia/Karachi (PKT)</option>
-                  <option value="UTC">UTC</option>
-                  <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                  <option value="Asia/Bangkok">Asia/Bangkok (ICT)</option>
+                  <optgroup label="UTC">
+                    <option value="UTC">UTC +00:00</option>
+                  </optgroup>
+                  <optgroup label="Africa">
+                    <option value="Africa/Cairo">Africa/Cairo (EET, +02:00)</option>
+                    <option value="Africa/Johannesburg">Africa/Johannesburg (SAST, +02:00)</option>
+                    <option value="Africa/Lagos">Africa/Lagos (WAT, +01:00)</option>
+                    <option value="Africa/Nairobi">Africa/Nairobi (EAT, +03:00)</option>
+                  </optgroup>
+                  <optgroup label="Americas">
+                    <option value="America/Anchorage">America/Anchorage (AKST, -09:00)</option>
+                    <option value="America/Bogota">America/Bogota (COT, -05:00)</option>
+                    <option value="America/Chicago">America/Chicago (CST, -06:00)</option>
+                    <option value="America/Denver">America/Denver (MST, -07:00)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (PST, -08:00)</option>
+                    <option value="America/Mexico_City">America/Mexico_City (CST, -06:00)</option>
+                    <option value="America/New_York">America/New_York (EST, -05:00)</option>
+                    <option value="America/Phoenix">America/Phoenix (MST, -07:00)</option>
+                    <option value="America/Sao_Paulo">America/Sao_Paulo (BRT, -03:00)</option>
+                    <option value="America/Toronto">America/Toronto (EST, -05:00)</option>
+                    <option value="America/Vancouver">America/Vancouver (PST, -08:00)</option>
+                    <option value="Pacific/Honolulu">Pacific/Honolulu (HST, -10:00)</option>
+                  </optgroup>
+                  <optgroup label="Asia">
+                    <option value="Asia/Baghdad">Asia/Baghdad (AST, +03:00)</option>
+                    <option value="Asia/Bangkok">Asia/Bangkok (ICT, +07:00)</option>
+                    <option value="Asia/Colombo">Asia/Colombo (SLST, +05:30)</option>
+                    <option value="Asia/Dhaka">Asia/Dhaka (BST, +06:00)</option>
+                    <option value="Asia/Dubai">Asia/Dubai (GST, +04:00)</option>
+                    <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (ICT, +07:00)</option>
+                    <option value="Asia/Hong_Kong">Asia/Hong_Kong (HKT, +08:00)</option>
+                    <option value="Asia/Jakarta">Asia/Jakarta (WIB, +07:00)</option>
+                    <option value="Asia/Karachi">Asia/Karachi (PKT, +05:00)</option>
+                    <option value="Asia/Kathmandu">Asia/Kathmandu (NPT, +05:45)</option>
+                    <option value="Asia/Kolkata">Asia/Kolkata (IST, +05:30)</option>
+                    <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT, +08:00)</option>
+                    <option value="Asia/Kuwait">Asia/Kuwait (AST, +03:00)</option>
+                    <option value="Asia/Manila">Asia/Manila (PHT, +08:00)</option>
+                    <option value="Asia/Riyadh">Asia/Riyadh (AST, +03:00)</option>
+                    <option value="Asia/Seoul">Asia/Seoul (KST, +09:00)</option>
+                    <option value="Asia/Shanghai">Asia/Shanghai (CST, +08:00)</option>
+                    <option value="Asia/Singapore">Asia/Singapore (SGT, +08:00)</option>
+                    <option value="Asia/Taipei">Asia/Taipei (CST, +08:00)</option>
+                    <option value="Asia/Tashkent">Asia/Tashkent (UZT, +05:00)</option>
+                    <option value="Asia/Tehran">Asia/Tehran (IRST, +03:30)</option>
+                    <option value="Asia/Tokyo">Asia/Tokyo (JST, +09:00)</option>
+                  </optgroup>
+                  <optgroup label="Australia &amp; Pacific">
+                    <option value="Australia/Adelaide">Australia/Adelaide (ACST, +09:30)</option>
+                    <option value="Australia/Brisbane">Australia/Brisbane (AEST, +10:00)</option>
+                    <option value="Australia/Darwin">Australia/Darwin (ACST, +09:30)</option>
+                    <option value="Australia/Melbourne">Australia/Melbourne (AEST, +10:00)</option>
+                    <option value="Australia/Perth">Australia/Perth (AWST, +08:00)</option>
+                    <option value="Australia/Sydney">Australia/Sydney (AEST, +10:00)</option>
+                    <option value="Pacific/Auckland">Pacific/Auckland (NZST, +12:00)</option>
+                    <option value="Pacific/Fiji">Pacific/Fiji (FJT, +12:00)</option>
+                  </optgroup>
+                  <optgroup label="Europe">
+                    <option value="Atlantic/Reykjavik">Atlantic/Reykjavik (GMT, +00:00)</option>
+                    <option value="Europe/Amsterdam">Europe/Amsterdam (CET, +01:00)</option>
+                    <option value="Europe/Athens">Europe/Athens (EET, +02:00)</option>
+                    <option value="Europe/Berlin">Europe/Berlin (CET, +01:00)</option>
+                    <option value="Europe/Brussels">Europe/Brussels (CET, +01:00)</option>
+                    <option value="Europe/Bucharest">Europe/Bucharest (EET, +02:00)</option>
+                    <option value="Europe/Copenhagen">Europe/Copenhagen (CET, +01:00)</option>
+                    <option value="Europe/Dublin">Europe/Dublin (GMT, +00:00)</option>
+                    <option value="Europe/Helsinki">Europe/Helsinki (EET, +02:00)</option>
+                    <option value="Europe/Istanbul">Europe/Istanbul (TRT, +03:00)</option>
+                    <option value="Europe/Kiev">Europe/Kiev (EET, +02:00)</option>
+                    <option value="Europe/Lisbon">Europe/Lisbon (WET, +00:00)</option>
+                    <option value="Europe/London">Europe/London (GMT, +00:00)</option>
+                    <option value="Europe/Madrid">Europe/Madrid (CET, +01:00)</option>
+                    <option value="Europe/Moscow">Europe/Moscow (MSK, +03:00)</option>
+                    <option value="Europe/Oslo">Europe/Oslo (CET, +01:00)</option>
+                    <option value="Europe/Paris">Europe/Paris (CET, +01:00)</option>
+                    <option value="Europe/Prague">Europe/Prague (CET, +01:00)</option>
+                    <option value="Europe/Rome">Europe/Rome (CET, +01:00)</option>
+                    <option value="Europe/Stockholm">Europe/Stockholm (CET, +01:00)</option>
+                    <option value="Europe/Warsaw">Europe/Warsaw (CET, +01:00)</option>
+                    <option value="Europe/Zurich">Europe/Zurich (CET, +01:00)</option>
+                  </optgroup>
                 </select>
               </div>
             </div>
@@ -308,7 +391,7 @@ const Settings: React.FC = () => {
                 Working Hours
               </h2>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Start Time</label>
                   <input
@@ -327,6 +410,22 @@ const Settings: React.FC = () => {
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <p className="font-semibold text-slate-900">Require Task for Time Entry</p>
+                  <p className="text-sm text-slate-600">Entries must be linked to a task</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.require_task_for_time_entry}
+                    onChange={(e) => handleSettingChange("require_task_for_time_entry", e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                </label>
               </div>
             </div>
 

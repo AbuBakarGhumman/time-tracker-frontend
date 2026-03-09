@@ -20,6 +20,7 @@ import TimeTracker from "./pages/individual/TimeTracker";
 import Analytics from "./pages/individual/Analytics";
 import Reports from "./pages/individual/Reports";
 import Projects from "./pages/individual/Projects";
+import ProjectBoard from "./pages/individual/ProjectBoard";
 import Profile from "./pages/individual/Profile";
 import Settings from "./pages/individual/Settings";
 
@@ -76,7 +77,7 @@ function App() {
 
   return (
     <UserProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <div className="min-h-screen flex flex-col">
           <Routes>
             {/* Public Routes */}
@@ -95,6 +96,7 @@ function App() {
             <Route path="/analytics" element={<ProtectedRoute element={<DashboardLayout><Analytics /></DashboardLayout>} />} />
             <Route path="/reports" element={<ProtectedRoute element={<DashboardLayout><Reports /></DashboardLayout>} />} />
             <Route path="/projects" element={<ProtectedRoute element={<DashboardLayout><Projects /></DashboardLayout>} />} />
+            <Route path="/projects/:id/board" element={<ProtectedRoute element={<DashboardLayout><ProjectBoard /></DashboardLayout>} />} />
             <Route path="/profile" element={<ProtectedRoute element={<DashboardLayout><Profile /></DashboardLayout>} />} />
             <Route path="/settings" element={<ProtectedRoute element={<DashboardLayout><Settings /></DashboardLayout>} />} />
 

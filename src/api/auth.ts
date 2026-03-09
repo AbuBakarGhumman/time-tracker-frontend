@@ -13,7 +13,6 @@ export interface RegisterPayload {
   password: string;
   job_title?: string;
   department?: string;
-  role?: "employee" | "admin";
   profile_pic_url?: string;
 }
 
@@ -113,7 +112,16 @@ export interface PlatformAdminAuthResponse {
   };
 }
 
-// Unified login response type
+export interface PlatformAdmin {
+  id: number;
+  email: string;
+  username: string;
+  full_name: string;
+  profile_pic_url?: string;
+  admin_level: string;
+  is_active: boolean;
+}
+
 export interface UnifiedLoginResponse {
   access_token: string;
   refresh_token: string;
@@ -122,7 +130,34 @@ export interface UnifiedLoginResponse {
   user?: User;
   employee?: Employee;
   company?: Company;
-  admin?: any;
+  admin?: PlatformAdmin;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STORAGE HELPER
+// "Remember me" → localStorage (persists across browser sessions)
+// No "remember me" → sessionStorage (cleared when browser/tab closes)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AUTH_KEYS = ["access_token", "refresh_token", "user_type", "user", "employee", "company", "platform_admin"] as const;
+
+function getAuthStore(key: string): string | null {
+  return localStorage.getItem(key) ?? sessionStorage.getItem(key);
+}
+
+function setAuthStore(key: string, value: string, rememberMe: boolean): void {
+  if (rememberMe) {
+    localStorage.setItem(key, value);
+  } else {
+    sessionStorage.setItem(key, value);
+  }
+}
+
+function clearAuthStore(): void {
+  AUTH_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -134,7 +169,6 @@ export const registerUser = async (payload: RegisterPayload) => {
     const response = await axios.post(`${API_BASE_URL}/auth/register`, payload);
     return response.data;
   } catch (error: any) {
-    console.error("Registration failed:", error);
     throw new Error(error?.response?.data?.detail || "Registration failed");
   }
 };
@@ -155,7 +189,6 @@ export const loginUser = async (payload: LoginPayload): Promise<AuthResponse> =>
     
     return response.data;
   } catch (error: any) {
-    console.error("Login failed:", error);
     throw new Error(error?.response?.data?.detail || "Login failed");
   }
 };
@@ -168,58 +201,51 @@ export const loginUser = async (payload: LoginPayload): Promise<AuthResponse> =>
  * Unified login that automatically detects user type
  * Use this instead of loginUser for a seamless experience
  */
-export const unifiedLogin = async (payload: LoginPayload): Promise<UnifiedLoginResponse> => {
+export const unifiedLogin = async (
+  payload: LoginPayload,
+  rememberMe: boolean = false,
+): Promise<UnifiedLoginResponse> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/auth/unified-login`, payload);
     const { access_token, refresh_token, user_type } = response.data;
-    
-    // Save tokens
-    localStorage.setItem("access_token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-    localStorage.setItem("user_type", user_type);
-    
-    // Save user-specific data based on type
+
+    setAuthStore("access_token", access_token, rememberMe);
+    setAuthStore("refresh_token", refresh_token, rememberMe);
+    setAuthStore("user_type", user_type, rememberMe);
+
     if (user_type === "individual" && response.data.user) {
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      setAuthStore("user", JSON.stringify(response.data.user), rememberMe);
     } else if (user_type === "employee" && response.data.employee) {
-      localStorage.setItem("employee", JSON.stringify(response.data.employee));
-      localStorage.setItem("company", JSON.stringify(response.data.company));
+      setAuthStore("employee", JSON.stringify(response.data.employee), rememberMe);
+      setAuthStore("company", JSON.stringify(response.data.company), rememberMe);
     } else if (user_type === "platform_admin" && response.data.admin) {
-      localStorage.setItem("platform_admin", JSON.stringify(response.data.admin));
+      setAuthStore("platform_admin", JSON.stringify(response.data.admin), rememberMe);
     }
-    
-    // Set default header for future requests
+
     axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
-    
     return response.data;
   } catch (error: any) {
-    console.error("Login API error:", error);
-    const errorDetail = error?.response?.data?.detail || error?.message || "Login failed";
-    console.error("Error detail being thrown:", errorDetail);
-    throw new Error(errorDetail);
+    throw new Error(error?.response?.data?.detail || error?.message || "Login failed");
   }
 };
 
 export const refreshAccessToken = async (): Promise<string> => {
   try {
-    const refresh_token = localStorage.getItem("refresh_token");
+    const refresh_token = getAuthStore("refresh_token");
     if (!refresh_token) {
       throw new Error("No refresh token found");
     }
 
     const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refresh_token });
     const { access_token } = response.data;
-    
-    // Update access token in localStorage
-    localStorage.setItem("access_token", access_token);
-    
-    // Update axios default header
+
+    // Preserve whichever storage the user originally chose
+    const inLocal = !!localStorage.getItem("access_token");
+    setAuthStore("access_token", access_token, inLocal);
+
     axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
-    
     return access_token;
   } catch (error: any) {
-    console.error("Token refresh failed:", error);
-    // If refresh fails, logout the user
     logout();
     throw new Error("Session expired. Please login again.");
   }
@@ -228,35 +254,26 @@ export const refreshAccessToken = async (): Promise<string> => {
 export const logout = async () => {
   try {
     await axios.post(`${API_BASE_URL}/auth/logout`);
-  } catch (error) {
-    console.error("Logout request failed:", error);
+  } catch {
+    // Logout should always succeed on the client side
   } finally {
-    // Clear all stored data
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("employee");
-    localStorage.removeItem("company");
-    localStorage.removeItem("platform_admin");
-    localStorage.removeItem("user_type");
+    clearAuthStore();
     delete axios.defaults.headers.common["Authorization"];
-    
-    // Clear all cached data
     CacheManager.clearAll();
   }
 };
 
 export const getStoredUser = (): User | null => {
-  const user = localStorage.getItem("user");
+  const user = getAuthStore("user");
   return user ? JSON.parse(user) : null;
 };
 
 export const getStoredToken = (): string | null => {
-  return localStorage.getItem("access_token");
+  return getAuthStore("access_token");
 };
 
 export const getStoredRefreshToken = (): string | null => {
-  return localStorage.getItem("refresh_token");
+  return getAuthStore("refresh_token");
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -271,7 +288,6 @@ export const registerCompany = async (payload: CompanyRegisterPayload) => {
     const response = await axios.post(`${API_BASE_URL}/company-auth/register-company`, payload);
     return response.data;
   } catch (error: any) {
-    console.error("Company registration failed:", error);
     throw new Error(error?.response?.data?.detail || "Company registration failed");
   }
 };
@@ -296,7 +312,6 @@ export const loginEmployee = async (payload: LoginPayload): Promise<EmployeeAuth
     
     return response.data;
   } catch (error: any) {
-    console.error("Employee login failed:", error);
     throw new Error(error?.response?.data?.detail || "Employee login failed");
   }
 };
@@ -320,7 +335,6 @@ export const loginPlatformAdmin = async (payload: LoginPayload): Promise<Platfor
     
     return response.data;
   } catch (error: any) {
-    console.error("Platform admin login failed:", error);
     throw new Error(error?.response?.data?.detail || "Platform admin login failed");
   }
 };
@@ -329,31 +343,26 @@ export const loginPlatformAdmin = async (payload: LoginPayload): Promise<Platfor
  * Get stored employee data
  */
 export const getStoredEmployee = (): Employee | null => {
-  const employee = localStorage.getItem("employee");
+  const employee = getAuthStore("employee");
   return employee ? JSON.parse(employee) : null;
 };
 
-/**
- * Get stored company data
- */
 export const getStoredCompany = (): Company | null => {
-  const company = localStorage.getItem("company");
+  const company = getAuthStore("company");
   return company ? JSON.parse(company) : null;
 };
 
-/**
- * Get stored platform admin data
- */
-export const getStoredPlatformAdmin = (): any | null => {
-  const admin = localStorage.getItem("platform_admin");
-  return admin ? JSON.parse(admin) : null;
+export const getStoredPlatformAdmin = (): PlatformAdmin | null => {
+  const admin = getAuthStore("platform_admin");
+  return admin ? (JSON.parse(admin) as PlatformAdmin) : null;
 };
 
-/**
- * Get current user type
- */
 export const getUserType = (): "individual" | "employee" | "platform_admin" | null => {
-  return localStorage.getItem("user_type") as any;
+  const stored = getAuthStore("user_type");
+  if (stored === "individual" || stored === "employee" || stored === "platform_admin") {
+    return stored;
+  }
+  return null;
 };
 
 /**

@@ -1,6 +1,6 @@
-import axios from "axios";
+import axios from "./interceptor";
 import { API_BASE_URL } from "./config";
-import { getWithCache } from "./fetchManager";
+import { getWithCache, clearCacheForKey } from "./fetchManager";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROJECT TYPES
@@ -11,6 +11,23 @@ export interface ProjectResponse {
   name: string;
   color: string;
   description?: string;
+}
+
+export interface ProjectTask {
+  id: number;
+  title: string;
+  description?: string;
+  priority?: string;
+  is_completed: boolean;
+  current_column_type?: string;  // e.g. "in_progress"
+  current_column_name?: string;  // e.g. "In Progress"
+}
+
+export interface ProjectColumn {
+  id: number;
+  name: string;
+  column_type: string;  // e.g. "in_progress"
+  order: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,6 +43,7 @@ export interface TimeEntry {
   duration_hours?: number;
   project_id?: number;  // Foreign key to project
   project?: ProjectResponse;  // Nested project object with name and color
+  task_id?: number;
   category?: string;
   status: "active" | "completed";
   notes?: string;
@@ -43,6 +61,7 @@ export interface ActiveEntry {
   elapsed_time?: string;
   project_id?: number;
   project?: ProjectResponse;
+  task_id?: number;
   category?: string;
 }
 
@@ -50,6 +69,8 @@ export interface ManualEntryPayload {
   task_name: string;
   description?: string;
   project_id?: number;  // Foreign key to project
+  task_id?: number;
+  task_column_type?: string;  // Move task to this board column type
   category?: string;
   start_time: string; // ISO format
   end_time: string; // ISO format
@@ -61,6 +82,7 @@ export interface AutomaticEntryPayload {
   task_name: string;
   description?: string;
   project_id?: number;  // Foreign key to project
+  task_id?: number;
   category?: string;
   is_billable?: number;
   notes?: string;
@@ -68,6 +90,7 @@ export interface AutomaticEntryPayload {
 
 export interface StopEntryPayload {
   notes?: string;
+  task_column_type?: string;
 }
 
 export interface TimeEntrySummary {
@@ -83,18 +106,18 @@ export interface TimeEntrySummary {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch all time entries for the current user
+ * Fetch all time entries for the current user (last N days, default 30)
  */
-export const fetchTimeEntries = async (): Promise<TimeEntry[]> => {
+export const fetchTimeEntries = async (days = 30): Promise<TimeEntry[]> => {
   try {
     return await getWithCache<TimeEntry[]>(
-      `${API_BASE_URL}/time-entries/list`,
+      `${API_BASE_URL}/time-entries/list?days=${days}`,
       {
-        cacheKey: "time-entries/list"
+        cacheKey: "time-entries/list",
+        cacheDuration: 30_000, // 30 seconds — entries should stay fresh
       }
     );
   } catch (error: any) {
-    console.error("Failed to fetch time entries:", error);
     throw new Error(error?.response?.data?.detail || "Failed to fetch time entries");
   }
 };
@@ -107,13 +130,13 @@ export const fetchActiveEntry = async (): Promise<ActiveEntry | null> => {
     return await getWithCache<ActiveEntry>(
       `${API_BASE_URL}/time-entries/active`,
       {
-        cacheKey: "time-entries/active"
+        cacheKey: "time-entries/active",
+        cacheDuration: 15_000, // 15 seconds — active timer must stay current
       }
     );
   } catch (error: any) {
-    // Active entry endpoint returns 404 when no active entry, which is normal
     if (error?.response?.status !== 404) {
-      console.error("Failed to fetch active entry:", error);
+      // not a 404, log it
     }
     return null;
   }
@@ -137,14 +160,48 @@ export const fetchProjects = async (): Promise<ProjectResponse[]> => {
 };
 
 /**
+ * Fetch board columns for a specific project
+ */
+export const fetchProjectColumns = async (projectId: number): Promise<ProjectColumn[]> => {
+  try {
+    return await getWithCache<ProjectColumn[]>(
+      `${API_BASE_URL}/projects/${projectId}/columns`,
+      {
+        cacheKey: `projects/${projectId}/columns`,
+        cacheDuration: 60_000, // 1 minute
+      }
+    );
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.detail || "Failed to fetch project columns");
+  }
+};
+
+/**
+ * Fetch incomplete tasks for a specific project (for time entry task selection)
+ */
+export const fetchProjectIncompleteTasks = async (projectId: number): Promise<ProjectTask[]> => {
+  try {
+    return await getWithCache<ProjectTask[]>(
+      `${API_BASE_URL}/projects/${projectId}/incomplete-tasks`,
+      {
+        cacheKey: `projects/${projectId}/incomplete-tasks`,
+        cacheDuration: 60_000, // 1 minute
+      }
+    );
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.detail || "Failed to fetch project tasks");
+  }
+};
+
+/**
  * Create a manual time entry (with start and end times)
  */
 export const createManualEntry = async (payload: ManualEntryPayload): Promise<TimeEntry> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/time-entries/manual`, payload);
+    clearCacheForKey("time-entries/list");
     return response.data;
   } catch (error: any) {
-    console.error("Failed to create manual entry:", error);
     throw new Error(error?.response?.data?.detail || "Failed to create manual entry");
   }
 };
@@ -155,9 +212,10 @@ export const createManualEntry = async (payload: ManualEntryPayload): Promise<Ti
 export const startAutomaticEntry = async (payload: AutomaticEntryPayload): Promise<TimeEntry> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/time-entries/start`, payload);
+    clearCacheForKey("time-entries/list");
+    clearCacheForKey("time-entries/active");
     return response.data;
   } catch (error: any) {
-    console.error("Failed to start timer:", error);
     throw new Error(error?.response?.data?.detail || "Failed to start timer");
   }
 };
@@ -171,9 +229,10 @@ export const stopTimerEntry = async (
 ): Promise<TimeEntry> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/time-entries/stop/${entryId}`, payload);
+    clearCacheForKey("time-entries/list");
+    clearCacheForKey("time-entries/active");
     return response.data;
   } catch (error: any) {
-    console.error("Failed to stop timer:", error);
     throw new Error(error?.response?.data?.detail || "Failed to stop timer");
   }
 };
@@ -187,9 +246,9 @@ export const updateTimeEntry = async (
 ): Promise<TimeEntry> => {
   try {
     const response = await axios.put(`${API_BASE_URL}/time-entries/${entryId}`, payload);
+    clearCacheForKey("time-entries/list");
     return response.data;
   } catch (error: any) {
-    console.error("Failed to update entry:", error);
     throw new Error(error?.response?.data?.detail || "Failed to update entry");
   }
 };
@@ -200,8 +259,8 @@ export const updateTimeEntry = async (
 export const deleteTimeEntry = async (entryId: number): Promise<void> => {
   try {
     await axios.delete(`${API_BASE_URL}/time-entries/${entryId}`);
+    clearCacheForKey("time-entries/list");
   } catch (error: any) {
-    console.error("Failed to delete entry:", error);
     throw new Error(error?.response?.data?.detail || "Failed to delete entry");
   }
 };

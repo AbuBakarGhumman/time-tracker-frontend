@@ -16,7 +16,6 @@ const Register: React.FC = () => {
     confirm_password: "",
     job_title: "",
     department: "",
-    role: "employee",
     profile_pic: null as File | null,
   });
 
@@ -97,7 +96,6 @@ const Register: React.FC = () => {
           password: formData.password,
           job_title: formData.job_title,
           department: formData.department,
-          role: formData.role as "employee" | "admin",
           profile_pic_url,
         };
 
@@ -418,22 +416,6 @@ const Register: React.FC = () => {
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
                   />
                 </div>
-              </div>
-
-              {/* Role Selection */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Role
-                </label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none cursor-pointer"
-                >
-                  <option value="employee">Employee</option>
-                  <option value="admin">Admin</option>
-                </select>
               </div>
 
               {/* Terms and Conditions */}

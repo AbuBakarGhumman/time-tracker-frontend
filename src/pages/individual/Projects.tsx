@@ -6,6 +6,7 @@ import { API_BASE_URL } from "../../api/config";
 import { SkeletonTable } from "../../components/Skeleton";
 import CacheManager from "../../utils/cacheManager";
 import type { User } from "../../api/auth";
+import { ProjectSettingsModal } from "../../components/ProjectSettingsModal";
 
 interface Project {
   id: number;
@@ -14,6 +15,7 @@ interface Project {
   color: string;
   created_at: string;
   updated_at: string;
+  is_owner: boolean;
 }
 
 const Projects: React.FC = () => {
@@ -23,6 +25,8 @@ const Projects: React.FC = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsProject, setSettingsProject] = useState<Project | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -230,8 +234,8 @@ const Projects: React.FC = () => {
           {projects.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01m-3-5h.01m-.01 4h.01" />
-                </svg>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01m-3-5h.01m-.01 4h.01" />
+              </svg>
               <p>No Projects Yet</p>
             </div>
           ) : (
@@ -244,7 +248,9 @@ const Projects: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Description</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Color</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Created</th>
+                      <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Board</th>
                       <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">View</th>
+                      <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Settings</th>
                       <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Edit</th>
                       <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Delete</th>
                     </tr>
@@ -253,7 +259,12 @@ const Projects: React.FC = () => {
                     {paginatedProjects.map((project) => (
                       <tr key={project.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-semibold text-slate-900">{project.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-900">{project.name}</span>
+                            {!project.is_owner && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full uppercase tracking-wide">Shared</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
                           {project.description || "-"}
@@ -272,6 +283,18 @@ const Projects: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <button
+                            onClick={() => navigate(`/projects/${project.id}/board`)}
+                            disabled={loading}
+                            className="inline-flex items-center gap-1.5 text-purple-600 hover:text-purple-800 hover:bg-purple-50 px-3 py-1 rounded transition-colors disabled:opacity-50 font-semibold text-sm"
+                            title="Go to Kanban Board"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                            </svg>
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
                             onClick={() => handleViewProject(project)}
                             disabled={loading}
                             className="inline-flex text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1 rounded transition-colors disabled:opacity-50"
@@ -284,28 +307,53 @@ const Projects: React.FC = () => {
                           </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={() => openEditModal(project)}
-                            disabled={loading}
-                            className="inline-flex text-amber-600 hover:text-amber-800 hover:bg-amber-50 px-3 py-1 rounded transition-colors disabled:opacity-50"
-                            title="Edit project"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
+                          {project.is_owner ? (
+                            <button
+                              onClick={() => { setSettingsProject(project); setShowSettingsModal(true); }}
+                              disabled={loading}
+                              className="inline-flex text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1 rounded transition-colors disabled:opacity-50"
+                              title="Project settings & members"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 px-2">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={() => handleDeleteProject(project.id)}
-                            disabled={loading}
-                            className="inline-flex text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1 rounded transition-colors disabled:opacity-50"
-                            title="Delete project"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          {project.is_owner ? (
+                            <button
+                              onClick={() => openEditModal(project)}
+                              disabled={loading}
+                              className="inline-flex text-amber-600 hover:text-amber-800 hover:bg-amber-50 px-3 py-1 rounded transition-colors disabled:opacity-50"
+                              title="Edit project"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 px-2">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {project.is_owner ? (
+                            <button
+                              onClick={() => handleDeleteProject(project.id)}
+                              disabled={loading}
+                              className="inline-flex text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1 rounded transition-colors disabled:opacity-50"
+                              title="Delete project"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 px-2">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -332,11 +380,10 @@ const Projects: React.FC = () => {
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                            page === currentPage
+                          className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all duration-200 ${page === currentPage
                               ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
                               : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>
@@ -454,6 +501,14 @@ const Projects: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Project Settings Modal */}
+      {showSettingsModal && settingsProject && (
+        <ProjectSettingsModal
+          project={settingsProject}
+          onClose={() => { setShowSettingsModal(false); setSettingsProject(null); }}
+        />
       )}
 
       {/* Create/Edit Modal */}

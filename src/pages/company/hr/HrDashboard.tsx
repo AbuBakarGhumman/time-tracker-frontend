@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CompanyDashboardLayout from "../../../components/CompanyDashboardLayout";
+import { getStoredEmployee, getStoredCompany } from "../../../api/auth";
 
 const StatCard = ({ icon, label, value, sub, color }: any) => (
   <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex items-start gap-4">
@@ -35,11 +36,11 @@ const HRDashboard: React.FC = () => {
   ];
 
   useEffect(() => {
-    const e = localStorage.getItem("employee");
-    const c = localStorage.getItem("company");
+    const e = getStoredEmployee();
+    const c = getStoredCompany();
     if (!e) { navigate("/login"); return; }
-    setEmployee(JSON.parse(e));
-    if (c) setCompany(JSON.parse(c));
+    setEmployee(e);
+    if (c) setCompany(c);
   }, []);
 
   return (

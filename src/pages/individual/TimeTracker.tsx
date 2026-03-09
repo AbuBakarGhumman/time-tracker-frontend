@@ -3,16 +3,21 @@ import {
   fetchTimeEntries,
   fetchActiveEntry as fetchActiveEntryFromAPI,
   fetchProjects as fetchProjectsFromAPI,
+  fetchProjectIncompleteTasks,
+  fetchProjectColumns,
   createManualEntry,
   startAutomaticEntry,
   stopTimerEntry,
   updateTimeEntry,
   deleteTimeEntry,
+  type ProjectTask,
+  type ProjectColumn,
 } from "../../api/timeentries";
 import AnalogClockIcon from "../../components/AnalogClockIcon";
 import { SkeletonTable } from "../../components/Skeleton";
 import { getNowPKTForForm, localDateTimeToPKTISO, backendISOToDatetimeLocal, formatHoursAsHoursMinutes, formatPKTLocalTime } from "../../utils/dateUtils";
 import { CacheManager } from "../../utils/cacheManager";
+import { clearCacheForKey } from "../../api/fetchManager";
 
 interface Project {
   id: number;
@@ -28,10 +33,17 @@ interface TimeEntry {
   duration_hours?: number;
   project_id?: number;
   project?: { id: number; name: string; color: string };
+  task_id?: number;
+  task?: { id: number; title: string };
+  task_column_name?: string;
+  task_column_type?: string;
   category?: string;
   status: string;
   notes?: string;
   description?: string;
+  is_billable?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface ActiveEntry {
@@ -42,6 +54,7 @@ interface ActiveEntry {
   elapsed_time?: string;
   project_id?: number;
   project?: { id: number; name: string; color: string };
+  task_id?: number;
   category?: string;
 }
 
@@ -50,6 +63,11 @@ const TimeTracker: React.FC = () => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeEntry, setActiveEntry] = useState<ActiveEntry | null>(null);
+  const [manualProjectTasks, setManualProjectTasks] = useState<ProjectTask[]>([]);
+  const [automaticProjectTasks, setAutomaticProjectTasks] = useState<ProjectTask[]>([]);
+  const [manualProjectColumns, setManualProjectColumns] = useState<ProjectColumn[]>([]);
+  const [stopModalColumns, setStopModalColumns] = useState<ProjectColumn[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [elapsedTime, setElapsedTime] = useState("");
@@ -62,17 +80,20 @@ const TimeTracker: React.FC = () => {
   const [editForm, setEditForm] = useState({
     task_name: "",
     description: "",
-    project_id: "",
     category: "",
     start_time: "",
     end_time: ""
   });
+  const [showStopModal, setShowStopModal] = useState(false);
+  const [stopColumnType, setStopColumnType] = useState("");
 
   // Manual entry form
   const [manualForm, setManualForm] = useState({
     task_name: "",
     description: "",
     project_id: "",
+    task_id: "",
+    task_column_type: "",
     category: "",
     start_time: getNowPKTForForm(),
     end_time: getNowPKTForForm(),
@@ -84,17 +105,21 @@ const TimeTracker: React.FC = () => {
     task_name: "",
     description: "",
     project_id: "",
+    task_id: "",
     category: "",
     is_billable: 1
   });
 
   useEffect(() => {
-    // Load initial data - entries, active entry, and projects
-    // Each function checks cache and returns early if valid
+    // Always fetch fresh entries on mount — cache TTL is short (30s) anyway,
+    // but we force-clear stale data from previous bugs to ensure correctness.
+    clearCacheForKey("time-entries/list");
+    clearCacheForKey("time-entries/active");
+
     Promise.all([
-      fetchEntries(),        // Uses cache if valid
-      fetchActiveEntry(),    // Uses cache if valid
-      fetchProjects(),       // Uses cache if valid
+      fetchEntries(),
+      fetchActiveEntry(),
+      fetchProjects(),
     ]).finally(() => setIsInitialLoading(false));
     
     // Smart polling for active entry:
@@ -197,37 +222,80 @@ const TimeTracker: React.FC = () => {
     }
   };
 
+  const loadTasksForProject = async (
+    projectId: string,
+    setter: React.Dispatch<React.SetStateAction<ProjectTask[]>>
+  ) => {
+    if (!projectId || projectId === "others") {
+      setter([]);
+      return;
+    }
+    setLoadingTasks(true);
+    try {
+      const tasks = await fetchProjectIncompleteTasks(parseInt(projectId));
+      setter(tasks);
+    } catch (error) {
+      console.error("Failed to fetch project tasks:", error);
+      setter([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const loadColumnsForProject = async (
+    projectId: string | number,
+    setter: React.Dispatch<React.SetStateAction<ProjectColumn[]>>
+  ) => {
+    const id = typeof projectId === "string" ? projectId : projectId.toString();
+    if (!id || id === "others") {
+      setter([]);
+      return;
+    }
+    try {
+      const cols = await fetchProjectColumns(parseInt(id));
+      setter(cols);
+    } catch (error) {
+      console.error("Failed to fetch project columns:", error);
+      setter([]);
+    }
+  };
+
   const handleCreateManual = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const isRealProject = manualForm.project_id && manualForm.project_id !== "others";
       await createManualEntry({
         task_name: manualForm.task_name,
         description: manualForm.description,
-        project_id: manualForm.project_id ? parseInt(manualForm.project_id) : undefined,
+        project_id: isRealProject ? parseInt(manualForm.project_id) : undefined,
+        task_id: isRealProject && manualForm.task_id ? parseInt(manualForm.task_id) : undefined,
+        task_column_type: isRealProject && manualForm.task_id && manualForm.task_column_type ? manualForm.task_column_type : undefined,
         category: manualForm.category,
         is_billable: manualForm.is_billable,
         // Send times in PKT format directly (no UTC conversion)
         start_time: localDateTimeToPKTISO(manualForm.start_time),
         end_time: localDateTimeToPKTISO(manualForm.end_time)
       });
-      
+
       setManualForm({
         task_name: "",
         description: "",
         project_id: "",
+        task_id: "",
+        task_column_type: "",
         category: "",
         start_time: getNowPKTForForm(),
         end_time: getNowPKTForForm(),
         is_billable: 1
       });
-      
+      setManualProjectTasks([]);
+      setManualProjectColumns([]);
+
       setMode("list");
-      // Clear cache so fresh data is fetched
-      CacheManager.clear("time-entries/list");
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to create entry");
+      alert(error?.message || "Failed to create entry");
     } finally {
       setLoading(false);
     }
@@ -237,10 +305,12 @@ const TimeTracker: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      const isRealProject = automaticForm.project_id && automaticForm.project_id !== "others";
       const result = await startAutomaticEntry({
         task_name: automaticForm.task_name,
         description: automaticForm.description,
-        project_id: automaticForm.project_id ? parseInt(automaticForm.project_id) : undefined,
+        project_id: isRealProject ? parseInt(automaticForm.project_id) : undefined,
+        task_id: isRealProject && automaticForm.task_id ? parseInt(automaticForm.task_id) : undefined,
         category: automaticForm.category,
         is_billable: automaticForm.is_billable
       });
@@ -253,6 +323,7 @@ const TimeTracker: React.FC = () => {
         status: result.status,
         project_id: result.project_id,
         project: result.project,
+        task_id: result.task_id,
         category: result.category
       });
       
@@ -260,40 +331,52 @@ const TimeTracker: React.FC = () => {
         task_name: "",
         description: "",
         project_id: "",
+        task_id: "",
         category: "",
         is_billable: 1
       });
+      setAutomaticProjectTasks([]);
       
       setMode("list");
-      // Clear cache so fresh data is fetched on next poll
-      CacheManager.clear("time-entries/list");
-      CacheManager.clear("time-entries/active");
-      // Fetch entries list in background
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to start timer");
+      alert(error?.message || "Failed to start timer");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStopAutomatic = async () => {
+  const handleStopAutomatic = async (taskColumnType?: string) => {
     if (!activeEntry) return;
-    
+
     setLoading(true);
+    setShowStopModal(false);
     try {
-      await stopTimerEntry(activeEntry.id);
-      
+      await stopTimerEntry(activeEntry.id, taskColumnType ? { task_column_type: taskColumnType } : {});
+
       setActiveEntry(null);
-      // Clear cache so fresh data is fetched
-      CacheManager.clear("time-entries/list");
-      CacheManager.clear("time-entries/active");
+      setStopColumnType("");
       await fetchEntries();
       await fetchActiveEntry();
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to stop entry");
+      alert(error?.message || "Failed to stop entry");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStopClick = () => {
+    if (!activeEntry) return;
+    // If timer has a task, ask where to move it before stopping
+    if (activeEntry.task_id) {
+      setStopColumnType("");
+      setStopModalColumns([]);
+      setShowStopModal(true);
+      if (activeEntry.project_id) {
+        loadColumnsForProject(activeEntry.project_id, setStopModalColumns);
+      }
+    } else {
+      handleStopAutomatic();
     }
   };
 
@@ -304,11 +387,43 @@ const TimeTracker: React.FC = () => {
     setLoading(true);
     try {
       await deleteTimeEntry(entryId);
-      // Clear cache so fresh data is fetched
-      CacheManager.clear("time-entries/list");
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to delete entry");
+      alert(error?.message || "Failed to delete entry");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContinueEntry = async (entry: TimeEntry) => {
+    if (activeEntry) {
+      alert("Stop the current active timer before starting a new one.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await startAutomaticEntry({
+        task_name: entry.task_name,
+        description: entry.description || entry.notes,
+        project_id: entry.project_id,
+        task_id: entry.task_id,
+        category: entry.category,
+        is_billable: entry.is_billable ?? 1,
+      });
+      setActiveEntry({
+        id: result.id,
+        task_name: result.task_name,
+        start_time: result.start_time,
+        status: result.status,
+        project_id: result.project_id,
+        project: result.project,
+        task_id: result.task_id,
+        category: result.category,
+      });
+      setMode("list");
+      await fetchEntries();
+    } catch (error: any) {
+      alert(error?.message || "Failed to start timer");
     } finally {
       setLoading(false);
     }
@@ -324,9 +439,7 @@ const TimeTracker: React.FC = () => {
     setEditForm({
       task_name: entry.task_name,
       description: entry.notes || entry.description || "",
-      project_id: entry.project_id?.toString() || "",
       category: entry.category || "",
-      // Convert backend ISO times to datetime-local format for form input
       start_time: backendISOToDatetimeLocal(entry.start_time),
       end_time: backendISOToDatetimeLocal(entry.end_time || "")
     });
@@ -342,21 +455,16 @@ const TimeTracker: React.FC = () => {
       await updateTimeEntry(selectedEditEntry.id, {
         task_name: editForm.task_name,
         description: editForm.description,
-        project_id: editForm.project_id ? parseInt(editForm.project_id) : undefined,
         category: editForm.category,
-        // Send times with PKT timezone offset (+05:00)
-        // Both CREATE and UPDATE now use the same conversion function
         start_time: localDateTimeToPKTISO(editForm.start_time),
         end_time: localDateTimeToPKTISO(editForm.end_time)
       });
       
       setShowEditModal(false);
       setSelectedEditEntry(null);
-      // Clear cache so fresh data is fetched
-      CacheManager.clear("time-entries/list");
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to update entry");
+      alert(error?.message || "Failed to update entry");
     } finally {
       setLoading(false);
     }
@@ -444,7 +552,7 @@ const TimeTracker: React.FC = () => {
 
             {/* Right — stop button */}
             <button
-              onClick={handleStopAutomatic}
+              onClick={handleStopClick}
               disabled={loading}
               className={`
                 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow flex-shrink-0
@@ -467,49 +575,118 @@ const TimeTracker: React.FC = () => {
           <h2 className="text-xl font-bold mb-4 text-slate-900">Create Manual Entry</h2>
           <form onSubmit={handleCreateManual} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Task Name *"
-                value={manualForm.task_name}
-                onChange={(e) => setManualForm({ ...manualForm, task_name: e.target.value })}
-                required
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
-              <select
-                value={manualForm.project_id}
-                onChange={(e) => setManualForm({ ...manualForm, project_id: e.target.value })}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
-              >
-                <option value="">Select Project (Optional)</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id.toString()}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Entry Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. Fix login bug"
+                  value={manualForm.task_name}
+                  onChange={(e) => setManualForm({ ...manualForm, task_name: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Project</label>
+                <select
+                  value={manualForm.project_id}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setManualForm({ ...manualForm, project_id: val, task_id: "", task_column_type: "" });
+                    loadTasksForProject(val, setManualProjectTasks);
+                    loadColumnsForProject(val, setManualProjectColumns);
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+                >
+                  <option value="">— No Project —</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </option>
+                  ))}
+                  <option value="others">Others (General Work)</option>
+                </select>
+              </div>
             </div>
 
+            {/* Task selector + Move To — shown together when a real project is selected */}
+            {manualForm.project_id && manualForm.project_id !== "others" && (
+              loadingTasks ? (
+                <p className="text-sm text-slate-500 px-1">Loading tasks...</p>
+              ) : manualProjectTasks.length === 0 ? (
+                <p className="text-sm text-amber-600 px-1">No incomplete tasks in this project. You can still log time without a task.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-1.5 text-slate-700">Task <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <select
+                      value={manualForm.task_id}
+                      onChange={(e) => {
+                        const selectedTask = manualProjectTasks.find(t => t.id.toString() === e.target.value);
+                        setManualForm({
+                          ...manualForm,
+                          task_id: e.target.value,
+                          task_name: selectedTask?.title ?? manualForm.task_name,
+                          task_column_type: selectedTask?.current_column_type ?? "",
+                        });
+                      }}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+                    >
+                      <option value="">— Select Task —</option>
+                      {manualProjectTasks.map((task) => (
+                        <option key={task.id} value={task.id.toString()}>
+                          {task.title}{task.current_column_name ? ` (${task.current_column_name})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1.5 text-slate-700">Move Task To <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <select
+                      value={manualForm.task_column_type}
+                      onChange={(e) => setManualForm({ ...manualForm, task_column_type: e.target.value })}
+                      disabled={!manualForm.task_id}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <option value="">— Keep Current Status —</option>
+                      {manualProjectColumns.map((col) => (
+                        <option key={col.id} value={col.column_type}>
+                          {col.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Category (e.g., Development, Meeting)"
-                value={manualForm.category}
-                onChange={(e) => setManualForm({ ...manualForm, category: e.target.value })}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
-              <select
-                value={manualForm.is_billable}
-                onChange={(e) => setManualForm({ ...manualForm, is_billable: parseInt(e.target.value) })}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
-              >
-                <option value={1}>Billable</option>
-                <option value={0}>Non-Billable</option>
-              </select>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Category <span className="text-slate-400 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. Development, Meeting, Support"
+                  value={manualForm.category}
+                  onChange={(e) => setManualForm({ ...manualForm, category: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Billing</label>
+                <select
+                  value={manualForm.is_billable}
+                  onChange={(e) => setManualForm({ ...manualForm, is_billable: parseInt(e.target.value) })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+                >
+                  <option value={1}>Billable</option>
+                  <option value={0}>Non-Billable</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">Start Time *</label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Start Time <span className="text-red-500">*</span></label>
                 <input
                   type="datetime-local"
                   value={manualForm.start_time}
@@ -519,7 +696,7 @@ const TimeTracker: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-slate-700">End Time *</label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">End Time <span className="text-red-500">*</span></label>
                 <input
                   type="datetime-local"
                   value={manualForm.end_time}
@@ -530,13 +707,16 @@ const TimeTracker: React.FC = () => {
               </div>
             </div>
 
-            <textarea
-              placeholder="Description (optional)"
-              value={manualForm.description}
-              onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
-              rows={2}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            />
+            <div>
+              <label className="block text-sm font-semibold mb-1.5 text-slate-700">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+              <textarea
+                placeholder="Add any notes or context for this entry..."
+                value={manualForm.description}
+                onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
+                rows={2}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
 
             <button
               type="submit"
@@ -554,53 +734,106 @@ const TimeTracker: React.FC = () => {
         <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
           <h2 className="text-xl font-bold mb-4 text-slate-900">Start Timer</h2>
           <form onSubmit={handleStartAutomatic} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Task Name *"
-              value={automaticForm.task_name}
-              onChange={(e) => setAutomaticForm({ ...automaticForm, task_name: e.target.value })}
-              required
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            />
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select
-                value={automaticForm.project_id}
-                onChange={(e) => setAutomaticForm({ ...automaticForm, project_id: e.target.value })}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
-              >
-                <option value="">Select Project (Optional)</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id.toString()}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                placeholder="Category"
-                value={automaticForm.category}
-                onChange={(e) => setAutomaticForm({ ...automaticForm, category: e.target.value })}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Entry Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. Fix login bug"
+                  value={automaticForm.task_name}
+                  onChange={(e) => setAutomaticForm({ ...automaticForm, task_name: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Project</label>
+                <select
+                  value={automaticForm.project_id}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAutomaticForm({ ...automaticForm, project_id: val, task_id: "", task_name: "" });
+                    loadTasksForProject(val, setAutomaticProjectTasks);
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+                >
+                  <option value="">— No Project —</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </option>
+                  ))}
+                  <option value="others">Others (General Work)</option>
+                </select>
+              </div>
             </div>
 
-            <select
-              value={automaticForm.is_billable}
-              onChange={(e) => setAutomaticForm({ ...automaticForm, is_billable: parseInt(e.target.value) })}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
-            >
-              <option value={1}>Billable</option>
-              <option value={0}>Non-Billable</option>
-            </select>
+            {/* Task selector — only shown when a real project is selected */}
+            {automaticForm.project_id && automaticForm.project_id !== "others" && (
+              loadingTasks ? (
+                <p className="text-sm text-slate-500 px-1">Loading tasks...</p>
+              ) : automaticProjectTasks.length === 0 ? (
+                <p className="text-sm text-amber-600 px-1">No incomplete tasks in this project. You can still log time without a task.</p>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Task <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <select
+                    value={automaticForm.task_id}
+                    onChange={(e) => {
+                      const selectedTask = automaticProjectTasks.find(t => t.id.toString() === e.target.value);
+                      setAutomaticForm({
+                        ...automaticForm,
+                        task_id: e.target.value,
+                        task_name: selectedTask?.title ?? automaticForm.task_name,
+                      });
+                    }}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">— Select Task —</option>
+                    {automaticProjectTasks.map((task) => (
+                      <option key={task.id} value={task.id.toString()}>
+                        {task.title}{task.current_column_name ? ` (${task.current_column_name})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )
+            )}
 
-            <textarea
-              placeholder="Description (optional)"
-              value={automaticForm.description}
-              onChange={(e) => setAutomaticForm({ ...automaticForm, description: e.target.value })}
-              rows={2}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Category <span className="text-slate-400 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. Development, Meeting, Support"
+                  value={automaticForm.category}
+                  onChange={(e) => setAutomaticForm({ ...automaticForm, category: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Billing</label>
+                <select
+                  value={automaticForm.is_billable}
+                  onChange={(e) => setAutomaticForm({ ...automaticForm, is_billable: parseInt(e.target.value) })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+                >
+                  <option value={1}>Billable</option>
+                  <option value={0}>Non-Billable</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-1.5 text-slate-700">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+              <textarea
+                placeholder="Add any notes or context for this entry..."
+                value={automaticForm.description}
+                onChange={(e) => setAutomaticForm({ ...automaticForm, description: e.target.value })}
+                rows={2}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
 
             <button
               type="submit"
@@ -636,7 +869,7 @@ const TimeTracker: React.FC = () => {
                   <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Task</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Title</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Project</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Start</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">End</th>
@@ -651,7 +884,21 @@ const TimeTracker: React.FC = () => {
                       {paginatedEntries.map((entry) => (
                         <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-slate-900">{entry.task_name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-slate-900">{entry.task_name}</span>
+                              {entry.status !== "active" && entry.task_column_type !== "done" && (
+                                <button
+                                  onClick={() => handleContinueEntry(entry)}
+                                  disabled={loading || !!activeEntry}
+                                  className="flex-shrink-0 text-green-600 hover:text-green-800 hover:bg-green-50 p-0.5 rounded transition-colors disabled:opacity-40"
+                                  title={activeEntry ? "Stop current timer first" : "Continue — start live timer with same info"}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                             {typeof entry.project === 'string' ? entry.project : entry.project?.name || "-"}
@@ -668,13 +915,31 @@ const TimeTracker: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              entry.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}>
-                              {entry.status}
-                            </span>
+                            {entry.task_column_name ? (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                entry.task_column_type === "done"
+                                  ? "bg-green-100 text-green-800"
+                                  : entry.task_column_type === "in_progress"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : entry.task_column_type === "review"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : entry.task_column_type === "bug"
+                                  ? "bg-red-100 text-red-800"
+                                  : entry.task_column_type === "todo"
+                                  ? "bg-indigo-100 text-indigo-800"
+                                  : "bg-slate-100 text-slate-700"
+                              }`}>
+                                {entry.task_column_name}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                entry.status === "active"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}>
+                                {entry.status}
+                              </span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <button
@@ -783,42 +1048,32 @@ const TimeTracker: React.FC = () => {
 
             {/* Modal Content */}
             <form onSubmit={handleUpdateEntry} id="editEntryForm" className="p-6 space-y-4 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Entry Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  placeholder="Task Name *"
+                  placeholder="e.g. Fix login bug"
                   value={editForm.task_name}
                   onChange={(e) => setEditForm({ ...editForm, task_name: e.target.value })}
                   required
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 />
-                <select
-                  value={editForm.project_id}
-                  onChange={(e) => setEditForm({ ...editForm, project_id: e.target.value })}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
-                >
-                  <option value="">Select Project (Optional)</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id.toString()}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Category <span className="text-slate-400 font-normal">(optional)</span></label>
                 <input
                   type="text"
-                  placeholder="Category"
+                  placeholder="e.g. Development, Meeting, Support"
                   value={editForm.category}
                   onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">Start Time *</label>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Start Time <span className="text-red-500">*</span></label>
                   <input
                     type="datetime-local"
                     value={editForm.start_time}
@@ -828,7 +1083,7 @@ const TimeTracker: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-slate-700">End Time *</label>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">End Time <span className="text-red-500">*</span></label>
                   <input
                     type="datetime-local"
                     value={editForm.end_time}
@@ -839,13 +1094,16 @@ const TimeTracker: React.FC = () => {
                 </div>
               </div>
 
-              <textarea
-                placeholder="Description (optional)"
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                rows={3}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+                <textarea
+                  placeholder="Add any notes or context for this entry..."
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
             </form>
 
             {/* Modal Footer */}
@@ -870,6 +1128,61 @@ const TimeTracker: React.FC = () => {
         </div>
       )}
 
+      {/* Stop Timer Modal — shown when stopping a timer that has a task */}
+      {showStopModal && activeEntry && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
+              <h3 className="text-lg font-bold">Stop Timer</h3>
+              <button
+                onClick={() => setShowStopModal(false)}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-slate-700 font-medium">
+                Stopping timer for: <span className="font-bold text-slate-900">{activeEntry.task_name}</span>
+              </p>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Move Task To...</label>
+                <select
+                  value={stopColumnType}
+                  onChange={(e) => setStopColumnType(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+                >
+                  <option value="">Keep current status</option>
+                  {stopModalColumns.map((col) => (
+                    <option key={col.id} value={col.column_type}>
+                      {col.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowStopModal(false)}
+                disabled={loading}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleStopAutomatic(stopColumnType || undefined)}
+                disabled={loading}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+              >
+                {loading ? "Stopping..." : "Stop Timer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Detail Modal - UPDATED with rounded corners */}
       {showDetailModal && selectedEntry && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -888,66 +1201,116 @@ const TimeTracker: React.FC = () => {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-6 overflow-y-auto flex-1">
-              {/* Task Information */}
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+              {/* Title */}
               <div>
-                <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">Task Name</h4>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Title</h4>
                 <p className="text-lg font-bold text-slate-900">{selectedEntry.task_name}</p>
               </div>
 
-              {/* Grid Layout for Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Project */}
+              {/* Project + Task + Task Board Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">Project</h4>
-                  <p className="text-slate-900 font-medium">{typeof selectedEntry.project === 'string' ? selectedEntry.project : selectedEntry.project?.name || "N/A"}</p>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Project</h4>
+                  <div className="flex items-center gap-2">
+                    {selectedEntry.project?.color && (
+                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: selectedEntry.project.color }} />
+                    )}
+                    <p className="text-slate-900 font-medium">{typeof selectedEntry.project === 'string' ? selectedEntry.project : selectedEntry.project?.name || "—"}</p>
+                  </div>
                 </div>
-
-                {/* Category */}
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">Category</h4>
-                  <p className="text-slate-900 font-medium">{selectedEntry.category || "N/A"}</p>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Task</h4>
+                  <p className="text-slate-900 font-medium">{selectedEntry.task?.title || "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Task Board Status</h4>
+                  {selectedEntry.task_column_name ? (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      selectedEntry.task_column_type === "done"
+                        ? "bg-green-100 text-green-800"
+                        : selectedEntry.task_column_type === "in_progress"
+                        ? "bg-blue-100 text-blue-800"
+                        : selectedEntry.task_column_type === "review"
+                        ? "bg-purple-100 text-purple-800"
+                        : selectedEntry.task_column_type === "bug"
+                        ? "bg-red-100 text-red-800"
+                        : selectedEntry.task_column_type === "todo"
+                        ? "bg-indigo-100 text-indigo-800"
+                        : "bg-slate-100 text-slate-700"
+                    }`}>
+                      {selectedEntry.task_column_name}
+                    </span>
+                  ) : (
+                    <p className="text-slate-500 text-sm">—</p>
+                  )}
                 </div>
               </div>
 
-              {/* Time Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-lg">
+              {/* Category + Billable */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Start Time</h4>
-                  <p className="text-sm text-slate-900 font-medium">{formatPKTTime(selectedEntry.start_time)}</p>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Category</h4>
+                  <p className="text-slate-900 font-medium">{selectedEntry.category || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">End Time</h4>
-                  <p className="text-sm text-slate-900 font-medium">
-                    {selectedEntry.end_time ? formatPKTTime(selectedEntry.end_time) : "N/A"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Duration and Status */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">Duration</h4>
-                  <p className="text-lg font-bold text-blue-600">
-                    {selectedEntry.duration_hours ? formatHoursAsHoursMinutes(selectedEntry.duration_hours) : "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">Status</h4>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                    selectedEntry.status === "completed"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Billable</h4>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    selectedEntry.is_billable ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
                   }`}>
-                    {selectedEntry.status}
+                    {selectedEntry.is_billable ? "Billable" : "Non-Billable"}
                   </span>
                 </div>
               </div>
 
+              {/* Time block */}
+              <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Start Time</h4>
+                  <p className="text-sm text-slate-900 font-medium">{formatPKTTime(selectedEntry.start_time)}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">End Time</h4>
+                  <p className="text-sm text-slate-900 font-medium">{selectedEntry.end_time ? formatPKTTime(selectedEntry.end_time) : "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Duration</h4>
+                  <p className="text-sm font-bold text-blue-600">
+                    {selectedEntry.duration_hours ? formatHoursAsHoursMinutes(selectedEntry.duration_hours) : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Entry Status + Logged At */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Entry Status</h4>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    selectedEntry.status === "active"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-slate-100 text-slate-600"
+                  }`}>
+                    {selectedEntry.status}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Logged At</h4>
+                  <p className="text-sm text-slate-900 font-medium">{selectedEntry.created_at ? formatPKTTime(selectedEntry.created_at) : "—"}</p>
+                </div>
+              </div>
+
+              {/* Last Updated */}
+              {selectedEntry.updated_at && (
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Last Updated</h4>
+                  <p className="text-sm text-slate-900 font-medium">{formatPKTTime(selectedEntry.updated_at)}</p>
+                </div>
+              )}
+
               {/* Description */}
               {(selectedEntry.notes || selectedEntry.description) && (
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">Description</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Description</h4>
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <p className="text-slate-700 whitespace-pre-wrap break-words">{selectedEntry.notes || selectedEntry.description}</p>
                   </div>

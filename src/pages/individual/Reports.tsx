@@ -50,6 +50,7 @@ interface ProjectStats {
   name: string;
   value: number;
   hours: number;
+  color?: string;
 }
 
 type ReportType = "attendance" | "work" | "projects";
@@ -303,8 +304,8 @@ const Reports: React.FC = () => {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {projectStats.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {projectStats.map((project, index) => (
+                  <Cell key={`cell-${index}`} fill={project.color || COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip formatter={(v: any) => formatHoursAsHoursMinutes(v)} />
@@ -320,7 +321,7 @@ const Reports: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    style={{ backgroundColor: project.color || COLORS[index % COLORS.length] }}
                   />
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-slate-900">{project.name}</p>

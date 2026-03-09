@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import CompanyDashboardLayout from "../../../components/CompanyDashboardLayout";
 import axios from "../../../api/interceptor";
 import { API_BASE_URL } from "../../../api/config";
+import { getStoredEmployee, getStoredCompany } from "../../../api/auth";
 
 const EmployeeDashboard: React.FC = () => {
   const [employee, setEmployee] = useState<any>(null);
@@ -23,11 +24,11 @@ const EmployeeDashboard: React.FC = () => {
   const hasCheckedOutToday = isToday(checkOutTime || undefined);
 
   useEffect(() => {
-    const e = localStorage.getItem("employee");
-    const c = localStorage.getItem("company");
+    const e = getStoredEmployee();
+    const c = getStoredCompany();
     if (!e) { navigate("/login"); return; }
-    setEmployee(JSON.parse(e));
-    if (c) setCompany(JSON.parse(c));
+    setEmployee(e);
+    if (c) setCompany(c);
     fetchStatus();
 
     // Clock tick
