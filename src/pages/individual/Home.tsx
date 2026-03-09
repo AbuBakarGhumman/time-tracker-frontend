@@ -364,7 +364,7 @@ const Home: React.FC = () => {
     if (hasCheckedInToday || loading) return;
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/attendance/check-in`, { 
+      await axios.post(`${API_BASE_URL}/attendance/check-in`, { 
         note: "",
         check_in_time: getNowPKTISO()
       });
@@ -391,7 +391,7 @@ const Home: React.FC = () => {
     if (!hasCheckedInToday || hasCheckedOutToday || loading) return;
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/attendance/check-out`, { 
+      await axios.post(`${API_BASE_URL}/attendance/check-out`, { 
         note: "",
         check_out_time: getNowPKTISO()
       });
