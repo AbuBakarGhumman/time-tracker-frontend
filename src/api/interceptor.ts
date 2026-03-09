@@ -1,5 +1,5 @@
 import axios from "axios";
-import { refreshAccessToken } from "./auth";
+import { refreshAccessToken, getStoredToken } from "./auth";
 
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: Error) => void }> = [];
@@ -20,7 +20,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 // Request interceptor to add Authorization header if token exists
 axios.interceptors.request.use(
   (config) => {
-    const access_token = localStorage.getItem("access_token");
+    const access_token = getStoredToken();
     if (access_token && !config.headers["Authorization"]) {
       config.headers["Authorization"] = `Bearer ${access_token}`;
     }

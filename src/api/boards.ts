@@ -73,9 +73,17 @@ export interface UpdateTaskPayload {
 // API CALLS
 // ─────────────────────────────────────────────────────────────────────────────
 
+// BOARD CACHE � 30-second in-memory cache
+const _boardCache = new Map<number, { data: BoardView; ts: number }>();
+const BOARD_TTL = 30_000;
+export const invalidateBoardCache = (projectId: number) => _boardCache.delete(projectId);
+
 export const fetchBoard = async (projectId: number): Promise<BoardView> => {
+  const hit = _boardCache.get(projectId);
+  if (hit && Date.now() - hit.ts < BOARD_TTL) return hit.data;
   try {
     const response = await axios.get(`${API_BASE_URL}/boards/${projectId}`);
+    _boardCache.set(projectId, { data: response.data, ts: Date.now() });
     return response.data;
   } catch (error: any) {
     console.error("Failed to fetch board:", error);

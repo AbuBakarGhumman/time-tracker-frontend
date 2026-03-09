@@ -126,7 +126,7 @@ const Home: React.FC = () => {
   // ── polling control ───────────────────────────────────────────────────────
   const startPolling = () => {
     stopPolling();
-    pollingRef.current = setInterval(fetchStatus, 30_000);
+    pollingRef.current = setInterval(fetchStatus, 60_000);
   };
 
   const stopPolling = () => {
@@ -368,16 +368,12 @@ const Home: React.FC = () => {
         note: "",
         check_in_time: getNowPKTISO()
       });
-      console.log("Check-in successful:", response.data);
-      await fetchStatus();
-      
-      // Clear cache for trend data to force immediate refresh
+      // Clear cache and refresh all data in parallel
       CacheManager.clear("trends/weekly");
       CacheManager.clear("trends/date-range", { startDate, endDate });
       CacheManager.clear("stats/quick");
-      
-      // Fetch fresh data
       await Promise.all([
+        fetchStatus(),
         fetchWeeklyTrends(),
         fetchFifteenDayTrend(),
         fetchQuickStats(),
@@ -399,16 +395,12 @@ const Home: React.FC = () => {
         note: "",
         check_out_time: getNowPKTISO()
       });
-      console.log("Check-out successful:", response.data);
-      await fetchStatus();
-      
-      // Clear cache for trend data to force immediate refresh
+      // Clear cache and refresh all data in parallel
       CacheManager.clear("trends/weekly");
       CacheManager.clear("trends/date-range", { startDate, endDate });
       CacheManager.clear("stats/quick");
-      
-      // Fetch fresh data
       await Promise.all([
+        fetchStatus(),
         fetchWeeklyTrends(),
         fetchFifteenDayTrend(),
         fetchQuickStats(),
