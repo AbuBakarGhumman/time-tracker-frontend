@@ -508,6 +508,8 @@ const Projects: React.FC = () => {
         <ProjectSettingsModal
           project={settingsProject}
           onClose={() => { setShowSettingsModal(false); setSettingsProject(null); }}
+          isOwner={settingsProject.is_owner}
+          currentUserId={user?.id}
         />
       )}
 

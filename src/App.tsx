@@ -23,6 +23,7 @@ import Projects from "./pages/individual/Projects";
 import ProjectBoard from "./pages/individual/ProjectBoard";
 import Profile from "./pages/individual/Profile";
 import Settings from "./pages/individual/Settings";
+import Notifications from "./pages/individual/Notifications";
 
 import About from "./pages/site/About";
 import PrivacyPolicy from "./pages/site/PrivacyPolicy";
@@ -99,6 +100,7 @@ function App() {
             <Route path="/projects/:id/board" element={<ProtectedRoute element={<DashboardLayout><ProjectBoard /></DashboardLayout>} />} />
             <Route path="/profile" element={<ProtectedRoute element={<DashboardLayout><Profile /></DashboardLayout>} />} />
             <Route path="/settings" element={<ProtectedRoute element={<DashboardLayout><Settings /></DashboardLayout>} />} />
+            <Route path="/notifications" element={<ProtectedRoute element={<DashboardLayout><Notifications /></DashboardLayout>} />} />
 
             {/* Company Dashboards */}
             <Route path="/company/admin-dashboard" element={<ProtectedRoute element={<AdminDashboard />} />} />

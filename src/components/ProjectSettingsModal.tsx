@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { fetchMembers, addMember, removeMember, type ProjectMember } from '../api/projectMembers';
+import {
+    fetchMembers,
+    removeMember,
+    updateMemberRole,
+    inviteMember,
+    fetchPendingInvitations,
+    cancelInvitation,
+    type ProjectMember,
+    type MemberRole,
+    type PendingInvitation,
+} from '../api/projectMembers';
 
 interface Project {
     id: number;
@@ -10,24 +20,46 @@ interface Project {
 interface Props {
     project: Project;
     onClose: () => void;
+    /** Pass true if the current user is the project owner */
+    isOwner?: boolean;
+    /** Current user's ID — used to detect admin-member role */
+    currentUserId?: number;
 }
 
-export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose }) => {
+const ROLE_META: Record<MemberRole, { label: string; color: string; desc: string }> = {
+    viewer: { label: 'Viewer', color: 'bg-slate-100 text-slate-600', desc: 'Can view the board and tasks only' },
+    editor: { label: 'Editor', color: 'bg-blue-100 text-blue-700', desc: 'Can create and edit tasks, log time' },
+    admin:  { label: 'Admin',  color: 'bg-purple-100 text-purple-700', desc: 'Can manage members and columns' },
+};
+
+export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose, isOwner = false, currentUserId }) => {
     const [members, setMembers] = useState<ProjectMember[]>([]);
+    const [pending, setPending] = useState<PendingInvitation[]>([]);
     const [loading, setLoading] = useState(true);
+    // Manager = owner OR admin member
+    const isManager = isOwner || members.some((m) => m.user_id === currentUserId && m.role === 'admin');
     const [email, setEmail] = useState('');
+    const [inviteRole, setInviteRole] = useState<MemberRole>('editor');
     const [adding, setAdding] = useState(false);
+    const [inviteSent, setInviteSent] = useState('');
     const [error, setError] = useState('');
     const [removingId, setRemovingId] = useState<number | null>(null);
+    const [updatingRoleId, setUpdatingRoleId] = useState<number | null>(null);
+    const [cancellingInvId, setCancellingInvId] = useState<number | null>(null);
 
     useEffect(() => {
-        loadMembers();
+        loadAll();
     }, [project.id]);
 
-    const loadMembers = async () => {
+    const loadAll = async () => {
         setLoading(true);
         try {
-            setMembers(await fetchMembers(project.id));
+            const [m, p] = await Promise.all([
+                fetchMembers(project.id),
+                isOwner ? fetchPendingInvitations(project.id).catch(() => []) : Promise.resolve([]),
+            ]);
+            setMembers(m);
+            setPending(p as PendingInvitation[]);
         } catch (e: any) {
             setError(e?.response?.data?.detail || 'Failed to load members');
         } finally {
@@ -35,18 +67,22 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose }) => {
         }
     };
 
-    const handleAdd = async (e: React.FormEvent) => {
+    const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         const trimmed = email.trim();
         if (!trimmed) return;
         setAdding(true);
         setError('');
+        setInviteSent('');
         try {
-            const member = await addMember(project.id, trimmed);
-            setMembers((prev) => [...prev, member]);
+            await inviteMember(project.id, trimmed, inviteRole);
+            setInviteSent(`Invitation sent to ${trimmed}`);
             setEmail('');
+            // Refresh pending list
+            const updated = await fetchPendingInvitations(project.id).catch(() => []);
+            setPending(updated as PendingInvitation[]);
         } catch (e: any) {
-            setError(e?.response?.data?.detail || 'Failed to add member');
+            setError(e?.response?.data?.detail || 'Failed to send invitation');
         } finally {
             setAdding(false);
         }
@@ -62,6 +98,32 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose }) => {
             setError(e?.response?.data?.detail || 'Failed to remove member');
         } finally {
             setRemovingId(null);
+        }
+    };
+
+    const handleCancelInvitation = async (invId: number) => {
+        setCancellingInvId(invId);
+        setError('');
+        try {
+            await cancelInvitation(invId);
+            setPending((prev) => prev.filter((i) => i.id !== invId));
+        } catch (e: any) {
+            setError(e?.response?.data?.detail || 'Failed to cancel invitation');
+        } finally {
+            setCancellingInvId(null);
+        }
+    };
+
+    const handleRoleChange = async (userId: number, newRole: MemberRole) => {
+        setUpdatingRoleId(userId);
+        setError('');
+        try {
+            const updated = await updateMemberRole(project.id, userId, newRole);
+            setMembers((prev) => prev.map((m) => m.user_id === userId ? updated : m));
+        } catch (e: any) {
+            setError(e?.response?.data?.detail || 'Failed to update role');
+        } finally {
+            setUpdatingRoleId(null);
         }
     };
 
@@ -83,10 +145,7 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose }) => {
                             <p className="text-sm text-blue-100 font-medium">{project.name}</p>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="text-white hover:bg-white/20 p-1.5 rounded-lg transition"
-                    >
+                    <button onClick={onClose} className="text-white hover:bg-white/20 p-1.5 rounded-lg transition">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -95,34 +154,104 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose }) => {
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-                    {/* Add member */}
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                            <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                            </svg>
-                            Invite Member
-                        </h4>
-                        <form onSubmit={handleAdd} className="flex gap-2">
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Enter email address…"
-                                className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
-                            />
-                            <button
-                                type="submit"
-                                disabled={adding || !email.trim()}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
-                            >
-                                {adding ? '…' : 'Invite'}
-                            </button>
-                        </form>
-                        {error && (
-                            <p className="mt-2 text-xs text-red-600 font-medium">{error}</p>
-                        )}
-                    </div>
+
+                    {/* Invite section — manager only */}
+                    {isManager && (
+                        <div>
+                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                </svg>
+                                Send Invitation
+                            </h4>
+
+                            <form onSubmit={handleInvite} className="flex flex-col gap-2">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="Enter email address…"
+                                        className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
+                                    />
+                                    <select
+                                        value={inviteRole}
+                                        onChange={(e) => setInviteRole(e.target.value as MemberRole)}
+                                        className="px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                                    >
+                                        {(Object.keys(ROLE_META) as MemberRole[]).map((r) => (
+                                            <option key={r} value={r}>{ROLE_META[r].label}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="submit"
+                                        disabled={adding || !email.trim()}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
+                                    >
+                                        {adding ? '…' : 'Send'}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-slate-500 pl-1">{ROLE_META[inviteRole].desc}</p>
+                            </form>
+
+                            {inviteSent && (
+                                <p className="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    {inviteSent}
+                                </p>
+                            )}
+                            {error && <p className="mt-2 text-xs text-red-600 font-medium">{error}</p>}
+                        </div>
+                    )}
+
+                    {/* Pending invitations */}
+                    {isManager && pending.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Pending Invitations
+                                <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">{pending.length}</span>
+                            </h4>
+                            <ul className="flex flex-col gap-1.5">
+                                {pending.map((inv) => {
+                                    const roleMeta = ROLE_META[inv.role as MemberRole] ?? ROLE_META.editor;
+                                    return (
+                                        <li key={inv.id} className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-slate-700 truncate">{inv.invitee_name}</p>
+                                                <p className="text-xs text-slate-500 truncate">{inv.invitee_email}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 ml-3 shrink-0">
+                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleMeta.color}`}>{roleMeta.label}</span>
+                                                <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Pending</span>
+                                                <button
+                                                    onClick={() => handleCancelInvitation(inv.id)}
+                                                    disabled={cancellingInvId === inv.id}
+                                                    className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition disabled:opacity-50"
+                                                    title="Cancel invitation"
+                                                >
+                                                    {cancellingInvId === inv.id ? (
+                                                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    )}
 
                     {/* Members list */}
                     <div>
@@ -144,61 +273,83 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose }) => {
                             </div>
                         ) : members.length === 0 ? (
                             <div className="text-center py-8 text-slate-400 text-sm">
-                                <svg className="w-10 h-10 mx-auto mb-2 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                No members yet. Invite someone by email.
+                                No members yet. Send an invitation by email.
                             </div>
                         ) : (
                             <ul className="flex flex-col gap-2">
-                                {members.map((m) => (
-                                    <li
-                                        key={m.user_id}
-                                        className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                                                {m.full_name.charAt(0).toUpperCase()}
+                                {members.map((m) => {
+                                    const roleMeta = ROLE_META[m.role as MemberRole] ?? { label: m.role, color: 'bg-slate-100 text-slate-600' };
+                                    return (
+                                        <li key={m.user_id} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                                                    {m.full_name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-slate-800 truncate">{m.full_name}</p>
+                                                    <p className="text-xs text-slate-500 truncate">{m.email}</p>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold text-slate-800 truncate">{m.full_name}</p>
-                                                <p className="text-xs text-slate-500 truncate">{m.email}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0 ml-3">
-                                            <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full capitalize">
-                                                {m.role}
-                                            </span>
-                                            <button
-                                                onClick={() => handleRemove(m.user_id)}
-                                                disabled={removingId === m.user_id}
-                                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition disabled:opacity-50"
-                                                title="Remove member"
-                                            >
-                                                {removingId === m.user_id ? (
-                                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                                    </svg>
+
+                                            <div className="flex items-center gap-2 shrink-0 ml-3">
+                                                {isManager ? (
+                                                    updatingRoleId === m.user_id ? (
+                                                        <div className="w-20 flex justify-center">
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                                                        </div>
+                                                    ) : (
+                                                        <select
+                                                            value={m.role}
+                                                            onChange={(e) => handleRoleChange(m.user_id, e.target.value as MemberRole)}
+                                                            className={`text-xs font-semibold px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${roleMeta.color}`}
+                                                        >
+                                                            {(Object.keys(ROLE_META) as MemberRole[]).map((r) => (
+                                                                <option key={r} value={r}>{ROLE_META[r].label}</option>
+                                                            ))}
+                                                        </select>
+                                                    )
                                                 ) : (
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
-                                                    </svg>
+                                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleMeta.color}`}>
+                                                        {roleMeta.label}
+                                                    </span>
                                                 )}
-                                            </button>
-                                        </div>
-                                    </li>
-                                ))}
+
+                                                {isManager && (
+                                                    <button
+                                                        onClick={() => handleRemove(m.user_id)}
+                                                        disabled={removingId === m.user_id}
+                                                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition disabled:opacity-50"
+                                                        title="Remove member"
+                                                    >
+                                                        {removingId === m.user_id ? (
+                                                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         )}
                     </div>
 
-                    {/* Info note */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-xs text-blue-700 flex gap-2">
-                        <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Members can view and interact with the board. Only you (the owner) can manage members and delete the project.
+                    {/* Role legend */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 flex flex-col gap-1.5">
+                        <p className="text-xs font-bold text-slate-600 mb-1">Permission Levels</p>
+                        {(Object.entries(ROLE_META) as [MemberRole, typeof ROLE_META[MemberRole]][]).map(([role, meta]) => (
+                            <div key={role} className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-14 text-center ${meta.color}`}>{meta.label}</span>
+                                <span className="text-xs text-slate-500">{meta.desc}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 

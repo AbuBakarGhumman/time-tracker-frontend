@@ -14,11 +14,41 @@ export const fetchMembers = async (projectId: number): Promise<ProjectMember[]> 
     return res.data;
 };
 
-export const addMember = async (projectId: number, email: string): Promise<ProjectMember> => {
-    const res = await axios.post(`${API_BASE_URL}/projects/${projectId}/members`, { email });
+export type MemberRole = "viewer" | "editor" | "admin";
+
+export interface PendingInvitation {
+    id: number;
+    invitee_email: string;
+    invitee_name: string;
+    role: MemberRole;
+    created_at: string;
+}
+
+/** Send an invitation (invitee must accept). Replaces the old addMember direct-add. */
+export const inviteMember = async (projectId: number, email: string, role: MemberRole = "editor"): Promise<void> => {
+    await axios.post(`${API_BASE_URL}/projects/${projectId}/invite`, { email, role });
+};
+
+export const fetchPendingInvitations = async (projectId: number): Promise<PendingInvitation[]> => {
+    const res = await axios.get(`${API_BASE_URL}/projects/${projectId}/invitations`);
+    return res.data;
+};
+
+/** @deprecated Direct member addition replaced by inviteMember */
+export const addMember = async (projectId: number, email: string, role: MemberRole = "editor"): Promise<ProjectMember> => {
+    const res = await axios.post(`${API_BASE_URL}/projects/${projectId}/members`, { email, role });
+    return res.data;
+};
+
+export const updateMemberRole = async (projectId: number, userId: number, role: MemberRole): Promise<ProjectMember> => {
+    const res = await axios.patch(`${API_BASE_URL}/projects/${projectId}/members/${userId}`, { role });
     return res.data;
 };
 
 export const removeMember = async (projectId: number, userId: number): Promise<void> => {
     await axios.delete(`${API_BASE_URL}/projects/${projectId}/members/${userId}`);
+};
+
+export const cancelInvitation = async (invitationId: number): Promise<void> => {
+    await axios.delete(`${API_BASE_URL}/invitations/${invitationId}`);
 };

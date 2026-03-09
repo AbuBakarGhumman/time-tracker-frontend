@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { getStoredTimezone } from "../utils/dateUtils";
 
 type AnalogClockIconProps = {
   size?: number;                 // px
@@ -6,27 +7,41 @@ type AnalogClockIconProps = {
   showSecondHand?: boolean;
 };
 
+function getTimeInZone(tz: string): { hours: number; minutes: number; seconds: number } {
+  const now = new Date();
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: false,
+      timeZone: tz,
+    }).formatToParts(now);
+    const get = (t: string) => parseInt(parts.find((p) => p.type === t)?.value ?? "0", 10);
+    return { hours: get("hour") % 12, minutes: get("minute"), seconds: get("second") };
+  } catch {
+    return { hours: now.getHours() % 12, minutes: now.getMinutes(), seconds: now.getSeconds() };
+  }
+}
+
 /**
  * AnalogClockIcon
  * A lightweight SVG analog clock that updates once per second.
- * - Uses local time by default
- * - No external libs
+ * Respects an optional IANA timezone prop; falls back to local time.
  */
 const AnalogClockIcon: React.FC<AnalogClockIconProps> = ({
   size = 22,
   className = "",
   showSecondHand = true,
 }) => {
-  const [now, setNow] = useState<Date>(() => new Date());
+  const [time, setTime] = useState(() => getTimeInZone(getStoredTimezone()));
 
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
+    const t = setInterval(() => setTime(getTimeInZone(getStoredTimezone())), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const seconds = now.getSeconds();
-  const minutes = now.getMinutes();
-  const hours = now.getHours() % 12;
+  const { hours, minutes, seconds } = time;
 
   // Smooth-ish movement (minute hand moves with seconds, hour hand moves with minutes)
   const secondAngle = seconds * 6; // 360/60

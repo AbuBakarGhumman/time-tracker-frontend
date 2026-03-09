@@ -14,21 +14,47 @@ const DEFAULT_TIMEZONE = "Asia/Karachi";
 /** Persist the user's IANA timezone string (called from Settings on load/save). */
 export const setStoredTimezone = (tz: string): void => {
   try {
-    localStorage.setItem(TZ_STORAGE_KEY, tz);
-    sessionStorage.setItem(TZ_STORAGE_KEY, tz);
+    const normalized = normalizeTimezone(tz);
+    localStorage.setItem(TZ_STORAGE_KEY, normalized);
+    sessionStorage.setItem(TZ_STORAGE_KEY, normalized);
   } catch {
     // ignore storage errors
   }
 };
 
+/** Maps short timezone aliases to valid IANA names. */
+const TZ_ALIAS_MAP: Record<string, string> = {
+  PKT: "Asia/Karachi",
+  IST: "Asia/Kolkata",
+  GST: "Asia/Dubai",
+  GMT: "UTC",
+};
+
+/** Validate that a string is a usable IANA timezone. Returns false for aliases like "PKT". */
+function isValidIANA(tz: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Normalize a timezone string: resolve aliases and fall back to default. */
+function normalizeTimezone(tz: string | null | undefined): string {
+  if (!tz) return DEFAULT_TIMEZONE;
+  if (TZ_ALIAS_MAP[tz]) return TZ_ALIAS_MAP[tz];
+  if (isValidIANA(tz)) return tz;
+  return DEFAULT_TIMEZONE;
+}
+
 /** Read the stored IANA timezone, falling back to Asia/Karachi. */
 export const getStoredTimezone = (): string => {
   try {
-    return (
+    const raw =
       localStorage.getItem(TZ_STORAGE_KEY) ||
-      sessionStorage.getItem(TZ_STORAGE_KEY) ||
-      DEFAULT_TIMEZONE
-    );
+      sessionStorage.getItem(TZ_STORAGE_KEY);
+    return normalizeTimezone(raw);
   } catch {
     return DEFAULT_TIMEZONE;
   }
