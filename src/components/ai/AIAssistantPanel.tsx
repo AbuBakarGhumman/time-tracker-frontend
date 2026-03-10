@@ -723,7 +723,7 @@ const AIAssistantPanel: React.FC = () => {
                   e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything... (@p to tag project)"
+                placeholder="Ask anything..."
                 disabled={isLoading}
                 rows={1}
                 className="w-full resize-none bg-transparent text-slate-800 dark:text-slate-200 placeholder-slate-400 pl-9 pr-10 py-2 text-sm focus:outline-none disabled:opacity-50 overflow-y-auto"
