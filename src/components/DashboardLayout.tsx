@@ -5,6 +5,7 @@ import { useUser } from "../context/UserContext";
 import { API_BASE_URL } from "../api/config";
 import type { User } from "../api/auth";
 import { NotificationBell } from "./NotificationBell";
+import AIAssistantButton from "./ai/AIAssistantButton";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -388,10 +389,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         )}
 
         {/* ── MAIN BODY ────────────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0d1117]">
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0d1117] relative">
           <div className="p-4">{children}</div>
         </main>
       </div>
+      {/* AI Assistant — fixed position, outside scrollable area */}
+      <AIAssistantButton />
     </div>
   );
 };

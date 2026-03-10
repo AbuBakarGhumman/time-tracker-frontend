@@ -16,6 +16,7 @@ interface Project {
   created_at: string;
   updated_at: string;
   is_owner: boolean;
+  member_role?: string | null;
 }
 
 const Projects: React.FC = () => {
@@ -55,15 +56,21 @@ const Projects: React.FC = () => {
       console.log("🔐 Access Token:", token ? `${token.substring(0, 20)}...` : "NOT FOUND");
       console.log("📦 API Base URL:", API_BASE_URL);
 
-      // Check if cache is valid (not expired)
+      // Check if cache is valid (not expired) and has the expected shape
       if (CacheManager.isValid("projects", {})) {
         const cachedProjects = CacheManager.get<Project[]>("projects", {});
-        if (cachedProjects) {
+        // Validate cache has member_role field (added in latest update)
+        const cacheValid = cachedProjects && cachedProjects.every(
+          (p) => p.is_owner || "member_role" in p
+        );
+        if (cacheValid) {
           setProjects(cachedProjects);
           setCurrentPage(1);
           setIsInitialLoading(false);
           return; // Don't fetch if cache is still valid
         }
+        // Stale cache shape, clear it
+        CacheManager.clear("projects", {});
       }
 
       // Cache is invalid or doesn't exist, fetch from API
@@ -307,9 +314,9 @@ const Projects: React.FC = () => {
                           </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          {project.is_owner ? (
+                          {(project.is_owner || project.member_role === "admin") ? (
                             <button
-                              onClick={() => { setSettingsProject(project); setShowSettingsModal(true); }}
+                              onClick={() => navigate(`/projects/${project.id}/settings`)}
                               disabled={loading}
                               className="inline-flex text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1 rounded transition-colors disabled:opacity-50"
                               title="Project settings & members"
@@ -324,7 +331,7 @@ const Projects: React.FC = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          {project.is_owner ? (
+                          {(project.is_owner || project.member_role === "admin") ? (
                             <button
                               onClick={() => openEditModal(project)}
                               disabled={loading}
@@ -483,15 +490,6 @@ const Projects: React.FC = () => {
 
             {/* Modal Footer */}
             <div className="flex-shrink-0 bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  closeDetailModal();
-                  openEditModal(selectedProject);
-                }}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200"
-              >
-                Edit Project
-              </button>
               <button
                 onClick={closeDetailModal}
                 className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"

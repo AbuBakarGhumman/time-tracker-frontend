@@ -6,6 +6,8 @@ export interface ProjectMember {
     email: string;
     full_name: string;
     role: string;
+    team_role?: string | null;
+    team_role_description?: string | null;
     invited_at: string;
     profile_pic_url?: string | null;
 }
@@ -41,8 +43,18 @@ export const addMember = async (projectId: number, email: string, role: MemberRo
     return res.data;
 };
 
-export const updateMemberRole = async (projectId: number, userId: number, role: MemberRole): Promise<ProjectMember> => {
-    const res = await axios.patch(`${API_BASE_URL}/projects/${projectId}/members/${userId}`, { role });
+export const updateMemberRole = async (
+    projectId: number,
+    userId: number,
+    role?: MemberRole,
+    teamRole?: string,
+    teamRoleDescription?: string,
+): Promise<ProjectMember> => {
+    const body: Record<string, string | undefined> = {};
+    if (role !== undefined) body.role = role;
+    if (teamRole !== undefined) body.team_role = teamRole;
+    if (teamRoleDescription !== undefined) body.team_role_description = teamRoleDescription;
+    const res = await axios.patch(`${API_BASE_URL}/projects/${projectId}/members/${userId}`, body);
     return res.data;
 };
 

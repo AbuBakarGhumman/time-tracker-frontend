@@ -7,10 +7,12 @@ import { KanbanList } from "../../components/kanban/KanbanList";
 import { TaskDetailPanel } from "../../components/kanban/TaskDetailPanel";
 import axios from "../../api/interceptor";
 import { API_BASE_URL } from "../../api/config";
+import { useAIAssistant } from "../../context/AIAssistantContext";
 
 const ProjectBoard: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { setProjectContext } = useAIAssistant();
     const [searchParams, setSearchParams] = useSearchParams();
     const [board, setBoard] = useState<BoardView | null>(null);
     const [projectName, setProjectName] = useState<string>("");
@@ -20,6 +22,14 @@ const ProjectBoard: React.FC = () => {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
     useEffect(() => { loadBoard(); }, [id]);
+
+    // Set AI assistant project context when on a board page
+    useEffect(() => {
+        if (id && projectName) {
+            setProjectContext({ id: parseInt(id, 10), name: projectName });
+        }
+        return () => setProjectContext(null);
+    }, [id, projectName, setProjectContext]);
 
     const loadBoard = async () => {
         if (!id) return;
@@ -73,8 +83,35 @@ const ProjectBoard: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="flex h-full items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="flex h-full flex-col p-6 space-y-4">
+                {/* Header skeleton */}
+                <div className="flex items-center justify-between animate-pulse">
+                    <div className="h-7 w-48 bg-slate-200 rounded" />
+                    <div className="flex gap-2">
+                        <div className="h-9 w-24 bg-slate-200 rounded-lg" />
+                        <div className="h-9 w-24 bg-slate-200 rounded-lg" />
+                    </div>
+                </div>
+                {/* Columns skeleton */}
+                <div className="flex gap-4 flex-1 overflow-hidden">
+                    {Array(4).fill(0).map((_, i) => (
+                        <div key={i} className="flex-shrink-0 w-72 bg-slate-100 rounded-xl p-4 animate-pulse">
+                            <div className="h-5 w-28 bg-slate-200 rounded mb-4" />
+                            <div className="space-y-3">
+                                {Array(3 - i % 2).fill(0).map((_, j) => (
+                                    <div key={j} className="bg-white rounded-lg p-3 shadow-sm border border-slate-200">
+                                        <div className="h-4 w-full bg-slate-200 rounded mb-2" />
+                                        <div className="h-3 w-2/3 bg-slate-200 rounded mb-3" />
+                                        <div className="flex gap-2">
+                                            <div className="h-5 w-14 bg-slate-200 rounded-full" />
+                                            <div className="h-5 w-14 bg-slate-200 rounded-full" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

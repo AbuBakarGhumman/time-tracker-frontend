@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { UserProvider } from "./context/UserContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AIAssistantProvider } from "./context/AIAssistantContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import DashboardLayout from "./components/DashboardLayout";
@@ -22,6 +23,7 @@ import Analytics from "./pages/individual/Analytics";
 import Reports from "./pages/individual/Reports";
 import Projects from "./pages/individual/Projects";
 import ProjectBoard from "./pages/individual/ProjectBoard";
+import ProjectSettings from "./pages/individual/ProjectSettings";
 import Profile from "./pages/individual/Profile";
 import Settings from "./pages/individual/Settings";
 import Notifications from "./pages/individual/Notifications";
@@ -80,6 +82,7 @@ function App() {
   return (
     <ThemeProvider>
     <UserProvider>
+    <AIAssistantProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <div className="min-h-screen flex flex-col">
           <Routes>
@@ -100,6 +103,7 @@ function App() {
             <Route path="/reports" element={<ProtectedRoute element={<DashboardLayout><Reports /></DashboardLayout>} />} />
             <Route path="/projects" element={<ProtectedRoute element={<DashboardLayout><Projects /></DashboardLayout>} />} />
             <Route path="/projects/:id/board" element={<ProtectedRoute element={<DashboardLayout><ProjectBoard /></DashboardLayout>} />} />
+            <Route path="/projects/:id/settings" element={<ProtectedRoute element={<DashboardLayout><ProjectSettings /></DashboardLayout>} />} />
             <Route path="/profile" element={<ProtectedRoute element={<DashboardLayout><Profile /></DashboardLayout>} />} />
             <Route path="/settings" element={<ProtectedRoute element={<DashboardLayout><Settings /></DashboardLayout>} />} />
             <Route path="/notifications" element={<ProtectedRoute element={<DashboardLayout><Notifications /></DashboardLayout>} />} />
@@ -116,6 +120,7 @@ function App() {
           </Routes>
         </div>
       </BrowserRouter>
+    </AIAssistantProvider>
     </UserProvider>
     </ThemeProvider>
   );

@@ -128,6 +128,44 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose, isOwne
         }
     };
 
+    const handleTeamRoleChange = async (userId: number, teamRole: string, teamRoleDescription?: string) => {
+        try {
+            const updated = await updateMemberRole(project.id, userId, undefined, teamRole, teamRoleDescription);
+            setMembers((prev) => prev.map((m) => m.user_id === userId ? updated : m));
+        } catch {
+            // silent
+        }
+    };
+
+    // Team role editor state
+    const [editingRoleForUser, setEditingRoleForUser] = useState<number | null>(null);
+    const [customRoleInput, setCustomRoleInput] = useState('');
+    const [customRoleDesc, setCustomRoleDesc] = useState('');
+
+    const PRESET_ROLES = [
+        'Frontend Developer', 'Backend Developer', 'Full Stack Developer',
+        'Designer', 'QA Engineer', 'DevOps', 'Project Manager',
+        'Product Owner', 'Data Analyst', 'Mobile Developer',
+    ];
+
+    const openRoleEditor = (member: ProjectMember) => {
+        setEditingRoleForUser(member.user_id);
+        setCustomRoleInput(member.team_role || '');
+        setCustomRoleDesc(member.team_role_description || '');
+    };
+
+    const saveRoleEditor = async () => {
+        if (editingRoleForUser === null) return;
+        await handleTeamRoleChange(editingRoleForUser, customRoleInput, customRoleDesc);
+        setEditingRoleForUser(null);
+    };
+
+    const cancelRoleEditor = () => {
+        setEditingRoleForUser(null);
+        setCustomRoleInput('');
+        setCustomRoleDesc('');
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
@@ -295,13 +333,36 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose, isOwne
                                                 </div>
                                                 )}
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-800 truncate">{m.full_name}</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="text-sm font-semibold text-slate-800 truncate">{m.full_name}</p>
+                                                        {m.team_role && (
+                                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 shrink-0 cursor-help" title={m.team_role_description || undefined}>{m.team_role}</span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-xs text-slate-500 truncate">{m.email}</p>
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-2 shrink-0 ml-3">
+                                                {/* Team role button */}
                                                 {isManager ? (
+                                                    <button
+                                                        onClick={() => openRoleEditor(m)}
+                                                        className={`text-[11px] px-1.5 py-1 rounded-lg border transition-colors cursor-pointer ${
+                                                            m.team_role
+                                                                ? 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'
+                                                                : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50 hover:text-slate-600'
+                                                        }`}
+                                                        title={m.team_role_description || 'Set team role'}
+                                                    >
+                                                        {m.team_role || 'Set Role'}
+                                                    </button>
+                                                ) : null}
+
+                                                {/* Access role */}
+                                                {m.role === 'owner' ? (
+                                                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Owner</span>
+                                                ) : isManager ? (
                                                     updatingRoleId === m.user_id ? (
                                                         <div className="w-20 flex justify-center">
                                                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
@@ -323,7 +384,7 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose, isOwne
                                                     </span>
                                                 )}
 
-                                                {isManager && (
+                                                {isManager && m.role !== 'owner' && (
                                                     <button
                                                         onClick={() => handleRemove(m.user_id)}
                                                         disabled={removingId === m.user_id}
@@ -372,6 +433,77 @@ export const ProjectSettingsModal: React.FC<Props> = ({ project, onClose, isOwne
                     </button>
                 </div>
             </div>
+
+            {/* Team role editor overlay */}
+            {editingRoleForUser !== null && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={cancelRoleEditor}>
+                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-5 w-96 space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-sm font-bold text-slate-800">Set Team Role</h3>
+
+                        <div>
+                            <label className="text-xs font-semibold text-slate-600 mb-1 block">Role</label>
+                            <input
+                                type="text"
+                                value={customRoleInput}
+                                onChange={(e) => setCustomRoleInput(e.target.value)}
+                                placeholder="e.g. Frontend Developer, Content Writer..."
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                list="modal-preset-roles-list"
+                                autoFocus
+                            />
+                            <datalist id="modal-preset-roles-list">
+                                {PRESET_ROLES.map((r) => (
+                                    <option key={r} value={r} />
+                                ))}
+                            </datalist>
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                                Description <span className="text-slate-400 font-normal">(optional)</span>
+                            </label>
+                            <textarea
+                                value={customRoleDesc}
+                                onChange={(e) => setCustomRoleDesc(e.target.value)}
+                                placeholder="Describe what this role does..."
+                                rows={3}
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none outline-none"
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                            {PRESET_ROLES.slice(0, 6).map((r) => (
+                                <button
+                                    key={r}
+                                    onClick={() => setCustomRoleInput(r)}
+                                    className={`text-[11px] px-2 py-1 rounded-md border transition-colors ${
+                                        customRoleInput === r
+                                            ? 'bg-blue-50 text-blue-600 border-blue-200'
+                                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    {r}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-1">
+                            <button
+                                onClick={cancelRoleEditor}
+                                className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveRoleEditor}
+                                className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:shadow-lg transition-all"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
