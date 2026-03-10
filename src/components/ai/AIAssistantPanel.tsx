@@ -322,24 +322,11 @@ const AIAssistantPanel: React.FC = () => {
             prev.map((m) => (m.id === msgId ? { ...m, content: accumulatedText } : m))
           );
         },
-        onToolStart: (tool) => {
+        onToolStart: (_tool) => {
           ensureMessage();
-          accumulatedText += `\n🔧 *Running ${tool}...*\n`;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === msgId ? { ...m, content: accumulatedText } : m))
-          );
         },
-        onToolResult: (result) => {
+        onToolResult: (_result) => {
           ensureMessage();
-          const icon = result.success ? "✅" : "❌";
-          accumulatedText = accumulatedText.replace(
-            /🔧 \*Running [^*]+\.\.\.\*\n$/,
-            ""
-          );
-          accumulatedText += `${icon} ${result.tool}: ${result.message}\n\n`;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === msgId ? { ...m, content: accumulatedText } : m))
-          );
         },
         onDone: (actions: AIActionResult[]) => {
           ensureMessage();
