@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAIAssistant } from "../../context/AIAssistantContext";
 import type { ChatMessage } from "../../context/AIAssistantContext";
-import { sendAIMessage, uploadAIDocument, streamAIMessage, fetchAIConversations, fetchAIConversation, deleteAIConversation } from "../../api/ai";
+import { uploadAIDocument, streamAIMessage, fetchAIConversations, fetchAIConversation, deleteAIConversation } from "../../api/ai";
 import type { AIConversation, AIActionResult } from "../../api/ai";
 import AIChatMessage from "./AIChatMessage";
 import { invalidateBoardCache } from "../../api/boards";
@@ -15,7 +15,6 @@ const QUICK_ACTIONS = [
 ];
 
 const MIN_WIDTH = 360;
-const MAX_WIDTH_RATIO = 0.95;
 const PADDING = 16;
 const HEADER_HEIGHT = 64; // h-16 top navbar
 
@@ -453,7 +452,6 @@ const AIAssistantPanel: React.FC = () => {
   if (!isOpen) return null;
 
   const isRight = buttonCorner.includes("right");
-  const isBottom = buttonCorner.includes("bottom");
   const resizeHandleIsLeft = isRight;
 
   const availableWidth = window.innerWidth - sidebarW;

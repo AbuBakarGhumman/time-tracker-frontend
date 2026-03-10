@@ -193,7 +193,7 @@ const ProjectSettings: React.FC = () => {
 
   const handleCancelInvitation = async (invitationId: number) => {
     try {
-      await cancelInvitation(projectId, invitationId);
+      await cancelInvitation(invitationId);
       loadMembers();
     } catch {
       // silent
@@ -457,7 +457,7 @@ const ProjectSettings: React.FC = () => {
                   {invitations.map((inv) => (
                     <div key={inv.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                       <div>
-                        <p className="text-sm font-medium text-slate-700">{inv.email}</p>
+                        <p className="text-sm font-medium text-slate-700">{inv.invitee_email}</p>
                         <p className="text-xs text-slate-500">Invited as {inv.role}</p>
                       </div>
                       {isManager && (

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import type { AIMessage, AIActionResult, AIProvider } from "../api/ai";
+import type { AIActionResult, AIProvider } from "../api/ai";
 
 export type ButtonCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export type ChatMode = "assistant" | "general";
@@ -33,7 +33,7 @@ interface AIAssistantContextType extends AIAssistantState {
   restorePanel: () => void;
   setConversationId: (id: number | null) => void;
   addMessage: (msg: ChatMessage) => void;
-  setMessages: (msgs: ChatMessage[]) => void;
+  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   setLoading: (loading: boolean) => void;
   setProjectContext: (ctx: { id: number; name: string } | null) => void;
   setProvider: (provider: AIProvider) => void;
@@ -166,4 +166,4 @@ export const useAIAssistant = () => {
   return context;
 };
 
-export type { ChatMessage, ChatMode };
+export type { ChatMessage };
