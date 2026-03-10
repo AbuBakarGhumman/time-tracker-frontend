@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import type { Task, BoardColumn, TaskActivity, Assignee } from '../../api/boards';
 import { updateTask, deleteTask, fetchTaskActivity, fetchProjectAssignees } from '../../api/boards';
 import { API_BASE_URL } from '../../api/config';
@@ -122,6 +123,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
     const [assignees, setAssignees] = useState<Assignee[]>([]);
     const [assigneeId, setAssigneeId] = useState<number | null>(task.assigned_to_id ?? null);
     const [showAssigneePicker, setShowAssigneePicker] = useState(false);
+    const [descEditing, setDescEditing] = useState(false);
 
     useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
     useEffect(() => {
@@ -193,6 +195,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
     };
     const handleDescBlur = () => {
         if (description !== (task.description ?? '')) save({ description });
+        setDescEditing(false);
     };
     const handlePriority = (p: typeof PRIORITIES[number]) => {
         setPriority(p);
@@ -331,15 +334,63 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                     <div className="flex-1 px-6 py-5 space-y-7 min-w-0">
                         {/* Description */}
                         <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Description</p>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                onBlur={handleDescBlur}
-                                placeholder="Add a description…"
-                                rows={14}
-                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none transition bg-slate-50 focus:bg-white"
-                            />
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</p>
+                                {description && !descEditing && (
+                                    <button
+                                        onClick={() => setDescEditing(true)}
+                                        className="text-xs text-blue-500 hover:text-blue-700 font-medium"
+                                    >
+                                        Edit
+                                    </button>
+                                )}
+                            </div>
+                            {descEditing || !description ? (
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    onBlur={handleDescBlur}
+                                    onFocus={() => setDescEditing(true)}
+                                    placeholder="Add a description… (supports markdown)"
+                                    rows={14}
+                                    autoFocus={descEditing}
+                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 font-mono placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none transition bg-slate-50 focus:bg-white"
+                                />
+                            ) : (
+                                <div
+                                    onClick={() => setDescEditing(true)}
+                                    className="task-markdown w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 bg-slate-50 hover:bg-white hover:border-blue-300 cursor-text transition min-h-[100px] overflow-auto max-h-[400px]"
+                                >
+                                    <ReactMarkdown
+                                        components={{
+                                            h1: ({ children }) => <h1 className="text-lg font-bold text-slate-800 mt-3 mb-1 first:mt-0">{children}</h1>,
+                                            h2: ({ children }) => <h2 className="text-base font-bold text-slate-800 mt-3 mb-1 first:mt-0">{children}</h2>,
+                                            h3: ({ children }) => <h3 className="text-sm font-bold text-slate-700 mt-2 mb-1 first:mt-0">{children}</h3>,
+                                            p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                                            ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-0.5">{children}</ul>,
+                                            ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-0.5">{children}</ol>,
+                                            li: ({ children }) => <li className="text-sm">{children}</li>,
+                                            strong: ({ children }) => <strong className="font-semibold text-slate-800">{children}</strong>,
+                                            em: ({ children }) => <em className="italic">{children}</em>,
+                                            code: ({ children, className }) => {
+                                                const isBlock = className?.includes('language-');
+                                                return isBlock
+                                                    ? <code className={`block bg-slate-800 text-slate-100 rounded-lg p-3 my-2 text-xs overflow-x-auto ${className || ''}`}>{children}</code>
+                                                    : <code className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>;
+                                            },
+                                            pre: ({ children }) => <pre className="my-2">{children}</pre>,
+                                            blockquote: ({ children }) => <blockquote className="border-l-3 border-blue-400 pl-3 my-2 text-slate-600 italic">{children}</blockquote>,
+                                            a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{children}</a>,
+                                            hr: () => <hr className="my-3 border-slate-200" />,
+                                            input: ({ checked, ...props }) => (
+                                                <input type="checkbox" checked={checked} readOnly className="mr-1.5 accent-blue-500" {...props} />
+                                            ),
+                                        }}
+                                    >
+                                        {description}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
                         </div>
 
                         {/* Activity / Timeline */}
