@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { Task, BoardColumn, TaskActivity, Assignee } from '../../api/boards';
-import { updateTask, deleteTask, fetchTaskActivity, fetchProjectAssignees } from '../../api/boards';
+import type { Task, BoardColumn, TaskActivity, Assignee, TaskNote } from '../../api/boards';
+import { updateTask, deleteTask, fetchTaskActivity, fetchProjectAssignees, fetchTaskNotes, createTaskNote, deleteTaskNote } from '../../api/boards';
 import { API_BASE_URL } from '../../api/config';
+import { formatDate, formatDateOnly } from '../../utils/dateUtils';
 
 const getAvatarUrl = (url: string | null | undefined): string | undefined => {
     if (!url) return undefined;
     return `${API_BASE_URL}${url}`;
 };
+
+/** Ensure naive ISO strings from the DB (stored as UTC) are parsed as UTC */
+const asUTC = (iso: string) => (!iso ? iso : iso.endsWith('Z') || iso.includes('+') ? iso : `${iso}Z`);
 
 interface TaskDetailPanelProps {
     task: Task;
@@ -28,10 +32,10 @@ const priorityConfig: Record<string, { label: string; pill: string; dot: string 
 };
 
 function fmtDate(iso: string) {
-    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDateOnly(asUTC(iso), { year: 'numeric', month: 'short', day: 'numeric' });
 }
 function fmtDateTime(iso: string) {
-    return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return formatDate(asUTC(iso), { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 // ── Timeline event ──────────────────────────────────────────────────────────
@@ -124,6 +128,19 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
     const [assigneeId, setAssigneeId] = useState<number | null>(task.assigned_to_id ?? null);
     const [showAssigneePicker, setShowAssigneePicker] = useState(false);
     const [descEditing, setDescEditing] = useState(false);
+    const [notes, setNotes] = useState<TaskNote[]>([]);
+    const [notesLoading, setNotesLoading] = useState(true);
+    const [noteInput, setNoteInput] = useState('');
+    const [sendingNote, setSendingNote] = useState(false);
+    const [noteMentionQuery, setNoteMentionQuery] = useState<string | null>(null);
+    const [noteMentionIndex, setNoteMentionIndex] = useState(0);
+    const [noteMentionStartPos, setNoteMentionStartPos] = useState(0);
+    const noteInputRef = useRef<HTMLTextAreaElement>(null);
+    const noteMentionRef = useRef<HTMLDivElement>(null);
+
+    const noteMentionResults = noteMentionQuery !== null
+        ? assignees.filter((a) => a.full_name.toLowerCase().includes(noteMentionQuery.toLowerCase())).slice(0, 6)
+        : [];
 
     useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
     useEffect(() => {
@@ -155,6 +172,15 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
         fetchProjectAssignees(projectId).then(setAssignees);
     }, [projectId]);
 
+    // Load notes
+    useEffect(() => {
+        setNotesLoading(true);
+        fetchTaskNotes(projectId, task.id)
+            .then(setNotes)
+            .catch(() => setNotes([]))
+            .finally(() => setNotesLoading(false));
+    }, [task.id, projectId]);
+
     // Close assignee picker on outside click
     useEffect(() => {
         if (!showAssigneePicker) return;
@@ -167,6 +193,76 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
     useEffect(() => {
         setAssigneeId(task.assigned_to_id ?? null);
     }, [task.id]);
+
+    // ── Note @mention handling ──
+    const handleNoteInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        const cursorPos = e.target.selectionStart ?? value.length;
+        setNoteInput(value);
+
+        const textBeforeCursor = value.slice(0, cursorPos);
+        const match = textBeforeCursor.match(/(^|[\s])@(\w*)$/);
+        if (match) {
+            const atIndex = textBeforeCursor.lastIndexOf('@');
+            setNoteMentionQuery(match[2]);
+            setNoteMentionStartPos(atIndex);
+            setNoteMentionIndex(0);
+            return;
+        }
+        setNoteMentionQuery(null);
+    }, []);
+
+    const handleNoteMentionSelect = useCallback((member: Assignee) => {
+        const before = noteInput.slice(0, noteMentionStartPos);
+        const after = noteInput.slice(noteMentionStartPos + 1 + (noteMentionQuery?.length ?? 0));
+        const tag = `@${member.full_name}`;
+        const newInput = `${before}${tag} ${after}`;
+        setNoteInput(newInput);
+        setNoteMentionQuery(null);
+        setTimeout(() => {
+            if (noteInputRef.current) {
+                const pos = before.length + tag.length + 1;
+                noteInputRef.current.selectionStart = pos;
+                noteInputRef.current.selectionEnd = pos;
+                noteInputRef.current.focus();
+            }
+        }, 0);
+    }, [noteInput, noteMentionStartPos, noteMentionQuery]);
+
+    const handleSendNote = async () => {
+        const trimmed = noteInput.trim();
+        if (!trimmed || sendingNote) return;
+        setSendingNote(true);
+        try {
+            const newNote = await createTaskNote(projectId, task.id, trimmed);
+            setNotes((prev) => [...prev, newNote]);
+            setNoteInput('');
+            if (noteInputRef.current) noteInputRef.current.style.height = 'auto';
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSendingNote(false);
+        }
+    };
+
+    const handleDeleteNote = async (noteId: number) => {
+        try {
+            await deleteTaskNote(projectId, task.id, noteId);
+            setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleNoteKeyDown = (e: React.KeyboardEvent) => {
+        if (noteMentionQuery !== null && noteMentionResults.length > 0) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setNoteMentionIndex((p) => (p + 1) % noteMentionResults.length); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setNoteMentionIndex((p) => (p - 1 + noteMentionResults.length) % noteMentionResults.length); return; }
+            if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); handleNoteMentionSelect(noteMentionResults[noteMentionIndex]); return; }
+            if (e.key === 'Escape') { e.preventDefault(); setNoteMentionQuery(null); return; }
+        }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendNote(); }
+    };
 
     const handleClose = () => {
         setVisible(false);
@@ -248,7 +344,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 
             {/* Panel */}
             <aside
-                className={`absolute top-0 right-0 z-50 h-full w-full max-w-[860px] bg-white shadow-2xl flex flex-col transition-transform duration-250 ease-out ${visible ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`absolute top-0 right-0 z-50 h-full w-full max-w-[1000px] bg-white shadow-2xl flex flex-col transition-transform duration-250 ease-out ${visible ? 'translate-x-0' : 'translate-x-full'}`}
             >
                 {/* ── TOP BAR ── */}
                 <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-white shrink-0">
@@ -393,6 +489,122 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                             )}
                         </div>
 
+                        {/* Notes */}
+                        <div>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Notes</p>
+
+                            {/* Notes list */}
+                            {notesLoading ? (
+                                <div className="space-y-3 mb-4">
+                                    {[...Array(2)].map((_, i) => (
+                                        <div key={i} className="animate-pulse flex gap-2.5">
+                                            <div className="w-7 h-7 rounded-full bg-slate-200 shrink-0" />
+                                            <div className="flex-1">
+                                                <div className="h-3 bg-slate-200 rounded w-1/4 mb-1.5" />
+                                                <div className="h-3 bg-slate-100 rounded w-3/4" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : notes.length > 0 ? (
+                                <div className="space-y-3 mb-4">
+                                    {notes.map((note) => (
+                                        <div key={note.id} className="group flex gap-2.5">
+                                            {getAvatarUrl(note.user_avatar) ? (
+                                                <img src={getAvatarUrl(note.user_avatar)} className="w-7 h-7 rounded-full shrink-0 object-cover mt-0.5" />
+                                            ) : (
+                                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <span className="text-[10px] font-bold text-white">{note.user_name?.[0] ?? '?'}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-semibold text-slate-700">{note.user_name}</span>
+                                                    <span className="text-[10px] text-slate-400">{fmtDateTime(note.created_at)}</span>
+                                                    <button
+                                                        onClick={() => handleDeleteNote(note.id)}
+                                                        className="ml-auto p-0.5 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                        title="Delete note"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <p className="text-sm text-slate-600 whitespace-pre-wrap break-words mt-0.5">
+                                                    {note.content.split(/(@[\w][\w\s]*?)(?=\s@|\s*$|[.,!?;:\n])/).map((part, i) =>
+                                                        part.startsWith('@') ? (
+                                                            <span key={i} className="text-blue-600 font-medium bg-blue-50 px-0.5 rounded">{part}</span>
+                                                        ) : (
+                                                            <span key={i}>{part}</span>
+                                                        )
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-400 mb-4">No notes yet. Write one below.</p>
+                            )}
+
+                            {/* Note input with @mention */}
+                            <div className="relative">
+                                {noteMentionQuery !== null && noteMentionResults.length > 0 && (
+                                    <div
+                                        ref={noteMentionRef}
+                                        className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 max-h-48 overflow-y-auto z-30"
+                                    >
+                                        {noteMentionResults.map((member, i) => (
+                                            <button
+                                                key={member.user_id}
+                                                onClick={() => handleNoteMentionSelect(member)}
+                                                className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                                                    i === noteMentionIndex
+                                                        ? 'bg-blue-50 text-blue-700'
+                                                        : 'text-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {getAvatarUrl(member.profile_pic_url) ? (
+                                                    <img src={getAvatarUrl(member.profile_pic_url)} className="w-5 h-5 rounded-full shrink-0 object-cover" />
+                                                ) : (
+                                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+                                                        <span className="text-[8px] font-bold text-white">{member.full_name[0]}</span>
+                                                    </div>
+                                                )}
+                                                <span className="font-medium truncate">{member.full_name}</span>
+                                                {member.team_role && <span className="text-xs text-slate-400 ml-auto">{member.team_role}</span>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="flex gap-2 items-end">
+                                    <textarea
+                                        ref={noteInputRef}
+                                        value={noteInput}
+                                        onChange={(e) => {
+                                            handleNoteInputChange(e);
+                                            e.target.style.height = 'auto';
+                                            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                                        }}
+                                        onKeyDown={handleNoteKeyDown}
+                                        placeholder="Write a note... use @ to mention a team member"
+                                        rows={1}
+                                        disabled={sendingNote}
+                                        className="flex-1 resize-none border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-slate-50 focus:bg-white transition disabled:opacity-50"
+                                        style={{ minHeight: '36px', maxHeight: '120px' }}
+                                    />
+                                    <button
+                                        onClick={handleSendNote}
+                                        disabled={!noteInput.trim() || sendingNote}
+                                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                    >
+                                        {sendingNote ? 'Sending...' : 'Send'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Activity / Timeline */}
                         <div>
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Activity</p>
@@ -500,7 +712,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                                             )}
                                             <div className="min-w-0">
                                                 <p className="text-xs font-medium text-slate-800 truncate">{a.full_name}</p>
-                                                <p className="text-[10px] text-slate-400 capitalize">{a.role}</p>
+                                                <p className="text-[10px] text-slate-400 capitalize">{a.team_role || a.role}</p>
                                             </div>
                                             {assigneeId === a.user_id && (
                                                 <svg className="w-3 h-3 ml-auto text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>

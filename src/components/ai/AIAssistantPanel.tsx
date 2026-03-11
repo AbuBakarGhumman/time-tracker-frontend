@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAIAssistant } from "../../context/AIAssistantContext";
 import type { ChatMessage } from "../../context/AIAssistantContext";
-import { uploadAIDocument, streamAIMessage, fetchAIConversations, fetchAIConversation, deleteAIConversation } from "../../api/ai";
-import type { AIConversation, AIActionResult } from "../../api/ai";
+import { uploadAIDocument, streamAIMessage, fetchAIConversation, deleteAIConversation } from "../../api/ai";
+import type { AIActionResult } from "../../api/ai";
 import AIChatMessage from "./AIChatMessage";
 import { invalidateBoardCache } from "../../api/boards";
+import { CacheManager } from "../../utils/cacheManager";
 import { fetchProjects } from "../../api/timeentries";
 import type { ProjectResponse } from "../../api/timeentries";
 
@@ -46,11 +47,13 @@ const AIAssistantPanel: React.FC = () => {
     buttonCorner,
     panelWidth,
     setPanelWidth,
+    conversations,
+    conversationsLoading,
+    refreshConversations,
+    setConversations,
   } = useAIAssistant();
 
   const [input, setInput] = useState("");
-  const [conversations, setConversations] = useState<AIConversation[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showModePicker, setShowModePicker] = useState(false);
@@ -83,9 +86,9 @@ const AIAssistantPanel: React.FC = () => {
     }
   }, [isOpen]);
 
-  // Load history when sidebar opens
+  // Refresh history when sidebar opens
   useEffect(() => {
-    if (historyOpen) loadConversations();
+    if (historyOpen) refreshConversations();
   }, [historyOpen]);
 
   // Close model picker on outside click
@@ -164,18 +167,6 @@ const AIAssistantPanel: React.FC = () => {
       }
     }, 0);
   }, [input, mentionStartPos, mentionQuery]);
-
-  const loadConversations = async () => {
-    setLoadingHistory(true);
-    try {
-      const data = await fetchAIConversations();
-      setConversations(data);
-    } catch {
-      // silent
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
 
   const handleLoadConversation = async (convId: number) => {
     try {
@@ -278,10 +269,14 @@ const AIAssistantPanel: React.FC = () => {
         const hasModifications = response.actions.some(
           (a) => a.success && ["create_project", "create_task", "create_multiple_tasks", "assign_task"].includes(a.action_type)
         );
-        if (hasModifications && (effectiveProject?.id || projectContext?.id)) {
-          invalidateBoardCache((effectiveProject?.id || projectContext?.id)!);
+        if (hasModifications) {
+          // Clear projects list cache so new/updated projects appear immediately
+          CacheManager.clear("projects", {});
+          if (effectiveProject?.id || projectContext?.id) {
+            invalidateBoardCache((effectiveProject?.id || projectContext?.id)!);
+          }
         }
-        if (historyOpen) loadConversations();
+        refreshConversations();
       } catch (err: any) {
         addMessage({
           id: `error-${Date.now()}`,
@@ -342,10 +337,14 @@ const AIAssistantPanel: React.FC = () => {
           const hasModifications = actions.some(
             (a) => a.success && ["create_project", "create_task", "create_multiple_tasks", "assign_task"].includes(a.action_type)
           );
-          if (hasModifications && (effectiveProject?.id || projectContext?.id)) {
-            invalidateBoardCache((effectiveProject?.id || projectContext?.id)!);
+          if (hasModifications) {
+            // Clear projects list cache so new/updated projects appear immediately
+            CacheManager.clear("projects", {});
+            if (effectiveProject?.id || projectContext?.id) {
+              invalidateBoardCache((effectiveProject?.id || projectContext?.id)!);
+            }
           }
-          if (historyOpen) loadConversations();
+          refreshConversations();
         },
         onError: (error) => {
           ensureMessage();
@@ -515,9 +514,14 @@ const AIAssistantPanel: React.FC = () => {
         {historyOpen && (
           <div className="w-[200px] flex-shrink-0 border-r border-slate-200 dark:border-slate-700 flex flex-col bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
             <div className="flex-1 overflow-y-auto">
-              {loadingHistory ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+              {conversationsLoading ? (
+                <div className="py-1 space-y-1">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="px-3 py-2.5 animate-pulse">
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-4/5 mb-1.5" />
+                      <div className="h-2 bg-slate-100 dark:bg-slate-700/60 rounded w-3/5" />
+                    </div>
+                  ))}
                 </div>
               ) : conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 px-3 text-center">

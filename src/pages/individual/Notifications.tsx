@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   fetchNotifications,
   markRead,
@@ -43,6 +43,12 @@ const TYPE_META: Record<string, { label: string; badge: string; icon: string; do
     icon: "bg-red-100 text-red-600",
     dot: "bg-red-500",
   },
+  task_mention: {
+    label: "Mention",
+    badge: "bg-purple-100 text-purple-700",
+    icon: "bg-purple-100 text-purple-600",
+    dot: "bg-purple-500",
+  },
 };
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -83,6 +89,7 @@ const NotificationSkeleton: React.FC = () => (
 // ── Main component ────────────────────────────────────────────────────────────
 const Notifications: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<number | null>(null);
@@ -273,7 +280,12 @@ const Notifications: React.FC = () => {
                 <div
                   key={n.id}
                   id={`notif-${n.id}`}
-                  onClick={() => { if (!isPending) handleMarkRead(n); }}
+                  onClick={() => {
+                    if (!isPending) handleMarkRead(n);
+                    if (n.type === "task_mention" && n.data?.project_id && n.data?.task_id) {
+                      navigate(`/projects/${n.data.project_id}/board?task=${n.data.task_id}`);
+                    }
+                  }}
                   className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-500 ${
                     isHighlighted
                       ? "bg-blue-100 border-blue-500 shadow-md shadow-blue-300/50 ring-2 ring-blue-400/40"
@@ -295,6 +307,11 @@ const Notifications: React.FC = () => {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    ) : n.type === "task_mention" ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9" />
                       </svg>
                     ) : (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

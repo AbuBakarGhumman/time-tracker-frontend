@@ -279,7 +279,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 updateTask(projectId, activeNumId, {
                     column_id: targetColId,
                     order: 0,
-                }).then(() => invalidateBoardCache(projectId)).catch(console.error);
+                }).then((updatedTask) => {
+                    // Sync is_completed from backend (auto-complete on done column)
+                    setTasks((prev) => prev.map((t) =>
+                        t.id === activeNumId ? { ...t, is_completed: updatedTask.is_completed } : t
+                    ));
+                    invalidateBoardCache(projectId);
+                }).catch(console.error);
             }
         }
     };

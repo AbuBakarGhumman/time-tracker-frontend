@@ -78,6 +78,8 @@ export interface Assignee {
   full_name: string;
   email: string;
   role: string;
+  team_role: string | null;
+  team_role_description: string | null;
   profile_pic_url: string | null;
 }
 
@@ -187,4 +189,37 @@ export const fetchProjectAssignees = async (projectId: number): Promise<Assignee
   } catch (error: any) {
     return [];
   }
+};
+
+// ─── Task Notes ────────────────────────────────────────────────────────────
+
+export interface TaskNote {
+  id: number;
+  task_id: number;
+  project_id: number;
+  user_id: number | null;
+  user_name: string | null;
+  user_avatar: string | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const fetchTaskNotes = async (projectId: number, taskId: number): Promise<TaskNote[]> => {
+  const response = await axios.get(`${API_BASE_URL}/boards/${projectId}/tasks/${taskId}/notes`);
+  return response.data;
+};
+
+export const createTaskNote = async (projectId: number, taskId: number, content: string): Promise<TaskNote> => {
+  const response = await axios.post(`${API_BASE_URL}/boards/${projectId}/tasks/${taskId}/notes`, { content });
+  return response.data;
+};
+
+export const updateTaskNote = async (projectId: number, taskId: number, noteId: number, content: string): Promise<TaskNote> => {
+  const response = await axios.put(`${API_BASE_URL}/boards/${projectId}/tasks/${taskId}/notes/${noteId}`, { content });
+  return response.data;
+};
+
+export const deleteTaskNote = async (projectId: number, taskId: number, noteId: number): Promise<void> => {
+  await axios.delete(`${API_BASE_URL}/boards/${projectId}/tasks/${taskId}/notes/${noteId}`);
 };

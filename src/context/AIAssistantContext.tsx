@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
-import type { AIActionResult, AIProvider } from "../api/ai";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import type { AIActionResult, AIProvider, AIConversation } from "../api/ai";
+import { fetchAIConversations } from "../api/ai";
+import { useUser } from "./UserContext";
 
 export type ButtonCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export type ChatMode = "assistant" | "general";
@@ -23,6 +25,8 @@ interface AIAssistantState {
   chatMode: ChatMode;
   buttonCorner: ButtonCorner;
   panelWidth: number;
+  conversations: AIConversation[];
+  conversationsLoading: boolean;
 }
 
 interface AIAssistantContextType extends AIAssistantState {
@@ -41,11 +45,16 @@ interface AIAssistantContextType extends AIAssistantState {
   clearChat: () => void;
   setButtonCorner: (corner: ButtonCorner) => void;
   setPanelWidth: (width: number) => void;
+  refreshConversations: () => void;
+  setConversations: React.Dispatch<React.SetStateAction<AIConversation[]>>;
 }
 
 const AIAssistantContext = createContext<AIAssistantContextType | undefined>(undefined);
 
 export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useUser();
+  const prevUserIdRef = useRef<number | null | undefined>(undefined);
+
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
@@ -65,6 +74,52 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const saved = localStorage.getItem("ai_panel_width");
     return saved ? parseInt(saved, 10) : 400;
   });
+  const [conversations, setConversations] = useState<AIConversation[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+
+  // Reset all AI state when the user changes (logout → login as different user)
+  useEffect(() => {
+    const currentUserId = user?.id ?? null;
+    if (prevUserIdRef.current === undefined) {
+      // First mount — just record the user, don't reset
+      prevUserIdRef.current = currentUserId;
+      return;
+    }
+    if (currentUserId !== prevUserIdRef.current) {
+      prevUserIdRef.current = currentUserId;
+      // User changed — wipe all chat state
+      setIsOpen(false);
+      setIsMinimized(false);
+      setConversationId(null);
+      setMessages([]);
+      setLoading(false);
+      setProjectContext(null);
+      setConversations([]);
+      setConversationsLoading(true);
+      // Reload conversations for the new user (or clear if logged out)
+      if (currentUserId) {
+        fetchAIConversations()
+          .then(setConversations)
+          .catch(() => {})
+          .finally(() => setConversationsLoading(false));
+      } else {
+        setConversationsLoading(false);
+      }
+    }
+  }, [user?.id]);
+
+  // Load conversations eagerly on mount
+  const refreshConversations = useCallback(() => {
+    setConversationsLoading(true);
+    fetchAIConversations()
+      .then(setConversations)
+      .catch(() => {})
+      .finally(() => setConversationsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    refreshConversations();
+  }, [refreshConversations]);
 
   const handleSetProvider = useCallback((p: AIProvider) => {
     setProvider(p);
@@ -151,6 +206,10 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
         clearChat,
         setButtonCorner,
         setPanelWidth,
+        conversations,
+        conversationsLoading,
+        refreshConversations,
+        setConversations,
       }}
     >
       {children}

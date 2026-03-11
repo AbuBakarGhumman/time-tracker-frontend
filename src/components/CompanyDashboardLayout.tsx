@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../api/config";
 import { logout, getStoredEmployee, getStoredCompany } from "../api/auth";
+import { useUser } from "../context/UserContext";
 
 interface CompanyDashboardLayoutProps {
   children: React.ReactNode;
@@ -65,6 +66,7 @@ const roleColors: Record<string, { gradient: string; badge: string; text: string
 };
 
 const CompanyDashboardLayout: React.FC<CompanyDashboardLayoutProps> = ({ children }) => {
+  const { setUser: setContextUser } = useUser();
   const [employee, setEmployee] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -113,6 +115,7 @@ const CompanyDashboardLayout: React.FC<CompanyDashboardLayoutProps> = ({ childre
   }, []);
 
   const handleLogout = async () => {
+    setContextUser(null);
     await logout();
     navigate("/login");
   };

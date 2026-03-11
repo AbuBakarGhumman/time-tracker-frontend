@@ -3,7 +3,7 @@ import { API_BASE_URL } from "./config";
 
 export interface AppNotification {
   id: number;
-  type: "project_invitation" | "info" | "alert";
+  type: "project_invitation" | "info" | "alert" | "task_mention";
   title: string;
   body: string | null;
   data: Record<string, any> | null;

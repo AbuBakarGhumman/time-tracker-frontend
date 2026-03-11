@@ -19,6 +19,7 @@ interface Settings {
   working_hours_end: string;
   timezone: string;
   require_task_for_time_entry: boolean;
+  ai_assistant_name: string;
 }
 
 const Settings: React.FC = () => {
@@ -35,6 +36,7 @@ const Settings: React.FC = () => {
     working_hours_end: "18:00",
     timezone: "Asia/Karachi",
     require_task_for_time_entry: false,
+    ai_assistant_name: "",
   });
   const [passwordData, setPasswordData] = useState({
     current_password: "",
@@ -420,6 +422,23 @@ const Settings: React.FC = () => {
                   />
                   <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
                 </label>
+              </div>
+            </div>
+
+            {/* AI Assistant Section */}
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 flex-1 flex flex-col">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 pb-3 border-b border-slate-200">AI Assistant</h2>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Assistant Name</label>
+                <input
+                  type="text"
+                  value={settings.ai_assistant_name || ""}
+                  onChange={(e) => handleSettingChange("ai_assistant_name", e.target.value)}
+                  placeholder="Give your assistant a name (e.g. Jarvis, Nova, Aria)"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  maxLength={30}
+                />
+                <p className="text-xs text-slate-500 mt-1">Your assistant will introduce itself by this name and respond to it.</p>
               </div>
             </div>
 

@@ -6,6 +6,10 @@ import { API_BASE_URL } from "../api/config";
 import type { User } from "../api/auth";
 import { NotificationBell } from "./NotificationBell";
 import AIAssistantButton from "./ai/AIAssistantButton";
+import { useAIAssistant } from "../context/AIAssistantContext";
+import axios from "../api/interceptor";
+import { setStoredTimezone } from "../utils/dateUtils";
+import CacheManager from "../utils/cacheManager";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -14,7 +18,7 @@ interface DashboardLayoutProps {
 const LG_BREAKPOINT_PX = 1024;
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const { user: contextUser } = useUser();
+  const { user: contextUser, setUser: setContextUser } = useUser();
   const [user, setUser] = useState<User | null>(contextUser);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -37,7 +41,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       navigate("/login");
     } else {
       setUser(storedUser);
-      
+
+      // Load user's timezone from DB settings early so all date formatting is correct
+      const cached = CacheManager.isValid("users/settings", {})
+        ? CacheManager.get<{ timezone?: string }>("users/settings", {})
+        : null;
+      if (cached?.timezone) {
+        setStoredTimezone(cached.timezone);
+      } else {
+        axios.get(`${API_BASE_URL}/users/settings`).then((res) => {
+          if (res.data?.timezone) {
+            setStoredTimezone(res.data.timezone);
+            CacheManager.set("users/settings", res.data, {});
+          }
+        }).catch(() => {});
+      }
+
       // Check if greeting was already shown in this session
       const greetingShown = sessionStorage.getItem("_greetingShown");
       if (!greetingShown) {
@@ -72,9 +91,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  const { clearChat, closePanel, setConversations } = useAIAssistant();
+
   const handleLogout = async () => {
     // Clear greeting flag so it shows again on next login
     sessionStorage.removeItem("_greetingShown");
+    // Immediately wipe AI assistant state before any async work
+    clearChat();
+    closePanel();
+    setConversations([]);
+    setContextUser(null);
     await logout();
     navigate("/login");
   };
