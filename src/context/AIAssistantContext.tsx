@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import type { AIActionResult, AIProvider, AIConversation } from "../api/ai";
 import { fetchAIConversations } from "../api/ai";
 import { useUser } from "./UserContext";
+import { CacheManager } from "../utils/cacheManager";
 
 export type ButtonCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export type ChatMode = "assistant" | "general";
@@ -45,11 +46,12 @@ interface AIAssistantContextType extends AIAssistantState {
   clearChat: () => void;
   setButtonCorner: (corner: ButtonCorner) => void;
   setPanelWidth: (width: number) => void;
-  refreshConversations: () => void;
+  refreshConversations: (forceRefresh?: boolean) => void;
   setConversations: React.Dispatch<React.SetStateAction<AIConversation[]>>;
 }
 
 const AIAssistantContext = createContext<AIAssistantContextType | undefined>(undefined);
+const CONVERSATIONS_CACHE_KEY = "ai_conversations";
 
 export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useUser();
@@ -96,10 +98,14 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setProjectContext(null);
       setConversations([]);
       setConversationsLoading(true);
+      CacheManager.clear(CONVERSATIONS_CACHE_KEY);
       // Reload conversations for the new user (or clear if logged out)
       if (currentUserId) {
         fetchAIConversations()
-          .then(setConversations)
+          .then((data) => {
+            setConversations(data);
+            CacheManager.set(CONVERSATIONS_CACHE_KEY, data);
+          })
           .catch(() => {})
           .finally(() => setConversationsLoading(false));
       } else {
@@ -108,11 +114,23 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [user?.id]);
 
-  // Load conversations eagerly on mount
-  const refreshConversations = useCallback(() => {
+  // Load conversations eagerly on mount (with cache support)
+  const refreshConversations = useCallback((forceRefresh = false) => {
+    // Return cached data if valid and not forced
+    if (!forceRefresh) {
+      const cached = CacheManager.get<AIConversation[]>(CONVERSATIONS_CACHE_KEY);
+      if (cached) {
+        setConversations(cached);
+        setConversationsLoading(false);
+        return;
+      }
+    }
     setConversationsLoading(true);
     fetchAIConversations()
-      .then(setConversations)
+      .then((data) => {
+        setConversations(data);
+        CacheManager.set(CONVERSATIONS_CACHE_KEY, data);
+      })
       .catch(() => {})
       .finally(() => setConversationsLoading(false));
   }, []);

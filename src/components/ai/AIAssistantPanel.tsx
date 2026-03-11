@@ -189,6 +189,7 @@ const AIAssistantPanel: React.FC = () => {
     try {
       await deleteAIConversation(convId);
       setConversations((prev) => prev.filter((c) => c.id !== convId));
+      CacheManager.clear("ai_conversations");
       if (conversationId === convId) clearChat();
     } catch {
       // silent
@@ -276,7 +277,7 @@ const AIAssistantPanel: React.FC = () => {
             invalidateBoardCache((effectiveProject?.id || projectContext?.id)!);
           }
         }
-        refreshConversations();
+        refreshConversations(true);
       } catch (err: any) {
         addMessage({
           id: `error-${Date.now()}`,
@@ -344,7 +345,7 @@ const AIAssistantPanel: React.FC = () => {
               invalidateBoardCache((effectiveProject?.id || projectContext?.id)!);
             }
           }
-          refreshConversations();
+          refreshConversations(true);
         },
         onError: (error) => {
           ensureMessage();
