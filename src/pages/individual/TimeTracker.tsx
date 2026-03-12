@@ -41,7 +41,7 @@ interface TimeEntry {
   status: string;
   notes?: string;
   description?: string;
-  is_billable?: number;
+  is_billable?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -72,6 +72,9 @@ const TimeTracker: React.FC = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [elapsedTime, setElapsedTime] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchEntries, setSearchEntries] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "active">("all");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
   const itemsPerPage = 10;
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null);
@@ -91,23 +94,23 @@ const TimeTracker: React.FC = () => {
   const [manualForm, setManualForm] = useState({
     task_name: "",
     description: "",
-    project_id: "",
+    project_id: "others",
     task_id: "",
     task_column_type: "",
     category: "",
     start_time: getNowPKTForForm(),
     end_time: getNowPKTForForm(),
-    is_billable: 1
+    is_billable: true
   });
 
   // Automatic entry form
   const [automaticForm, setAutomaticForm] = useState({
     task_name: "",
     description: "",
-    project_id: "",
+    project_id: "others",
     task_id: "",
     category: "",
-    is_billable: 1
+    is_billable: true
   });
 
   useEffect(() => {
@@ -281,13 +284,13 @@ const TimeTracker: React.FC = () => {
       setManualForm({
         task_name: "",
         description: "",
-        project_id: "",
+        project_id: "others",
         task_id: "",
         task_column_type: "",
         category: "",
         start_time: getNowPKTForForm(),
         end_time: getNowPKTForForm(),
-        is_billable: 1
+        is_billable: true
       });
       setManualProjectTasks([]);
       setManualProjectColumns([]);
@@ -330,10 +333,10 @@ const TimeTracker: React.FC = () => {
       setAutomaticForm({
         task_name: "",
         description: "",
-        project_id: "",
+        project_id: "others",
         task_id: "",
         category: "",
-        is_billable: 1
+        is_billable: true
       });
       setAutomaticProjectTasks([]);
       
@@ -408,7 +411,7 @@ const TimeTracker: React.FC = () => {
         project_id: entry.project_id,
         task_id: entry.task_id,
         category: entry.category,
-        is_billable: entry.is_billable ?? 1,
+        is_billable: entry.is_billable ?? true,
       });
       setActiveEntry({
         id: result.id,
@@ -483,11 +486,26 @@ const TimeTracker: React.FC = () => {
     });
   };
 
-  // Pagination logic
-  const totalPages = Math.ceil(entries.length / itemsPerPage);
+  // Filter + Pagination logic
+  const filteredEntries = entries.filter((e) => {
+    if (searchEntries) {
+      const q = searchEntries.toLowerCase();
+      const projectName = typeof e.project === "string" ? e.project : e.project?.name || "";
+      if (!e.task_name.toLowerCase().includes(q) && !projectName.toLowerCase().includes(q) && !(e.category || "").toLowerCase().includes(q)) return false;
+    }
+    if (statusFilter === "completed" && e.status === "active") return false;
+    if (statusFilter === "active" && e.status !== "active") return false;
+    if (projectFilter !== "all") {
+      const pId = typeof e.project === "string" ? null : e.project?.id;
+      if (projectFilter === "none" && pId) return false;
+      if (projectFilter !== "none" && String(pId) !== projectFilter) return false;
+    }
+    return true;
+  });
+  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedEntries = entries.slice(startIndex, endIndex);
+  const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
 
   const handlePreviousPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -598,13 +616,12 @@ const TimeTracker: React.FC = () => {
                   }}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value="">— No Project —</option>
+                  <option value="others">Others (General Work)</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id.toString()}>
                       {project.name}
                     </option>
                   ))}
-                  <option value="others">Others (General Work)</option>
                 </select>
               </div>
             </div>
@@ -674,12 +691,12 @@ const TimeTracker: React.FC = () => {
               <div>
                 <label className="block text-sm font-semibold mb-1.5 text-slate-700">Billing</label>
                 <select
-                  value={manualForm.is_billable}
-                  onChange={(e) => setManualForm({ ...manualForm, is_billable: parseInt(e.target.value) })}
+                  value={manualForm.is_billable ? "true" : "false"}
+                  onChange={(e) => setManualForm({ ...manualForm, is_billable: e.target.value === "true" })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value={1}>Billable</option>
-                  <option value={0}>Non-Billable</option>
+                  <option value="true">Billable</option>
+                  <option value="false">Non-Billable</option>
                 </select>
               </div>
             </div>
@@ -757,13 +774,12 @@ const TimeTracker: React.FC = () => {
                   }}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value="">— No Project —</option>
+                  <option value="others">Others (General Work)</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id.toString()}>
                       {project.name}
                     </option>
                   ))}
-                  <option value="others">Others (General Work)</option>
                 </select>
               </div>
             </div>
@@ -814,12 +830,12 @@ const TimeTracker: React.FC = () => {
               <div>
                 <label className="block text-sm font-semibold mb-1.5 text-slate-700">Billing</label>
                 <select
-                  value={automaticForm.is_billable}
-                  onChange={(e) => setAutomaticForm({ ...automaticForm, is_billable: parseInt(e.target.value) })}
+                  value={automaticForm.is_billable ? "true" : "false"}
+                  onChange={(e) => setAutomaticForm({ ...automaticForm, is_billable: e.target.value === "true" })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value={1}>Billable</option>
-                  <option value={0}>Non-Billable</option>
+                  <option value="true">Billable</option>
+                  <option value="false">Non-Billable</option>
                 </select>
               </div>
             </div>
@@ -851,17 +867,56 @@ const TimeTracker: React.FC = () => {
         isInitialLoading ? (
           <SkeletonTable rows={5} />
         ) : (
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <h2 className="text-xl font-bold text-slate-900">Recent Entries</h2>
+          <>
+          {/* Search & Filters */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6 flex gap-4 flex-wrap items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchEntries}
+                onChange={(e) => { setSearchEntries(e.target.value); setCurrentPage(1); }}
+                placeholder="Search by title, project, or category..."
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
             </div>
-            
-            {entries.length === 0 ? (
+            <select
+              value={projectFilter}
+              onChange={(e) => { setProjectFilter(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            >
+              <option value="all">All Projects</option>
+              <option value="others">Others (General Work)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={String(p.id)}>{p.name}</option>
+              ))}
+            </select>
+            <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+              {(["all", "completed", "active"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => { setStatusFilter(s); setCurrentPage(1); }}
+                  className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${
+                    statusFilter === s
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {s === "all" ? "All" : s === "completed" ? "Completed" : "Running"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            {filteredEntries.length === 0 ? (
               <div className="p-8 text-center text-slate-500">
                 <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p>No time entries yet</p>
+                <p>{searchEntries || statusFilter !== "all" || projectFilter !== "all" ? "No entries match your filters" : "No time entries yet"}</p>
               </div>
             ) : (
               <>
@@ -901,7 +956,7 @@ const TimeTracker: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                            {typeof entry.project === 'string' ? entry.project : entry.project?.name || "-"}
+                            {typeof entry.project === 'string' ? entry.project : entry.project?.name || "Others (General Work)"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                             {formatPKTTime(entry.start_time)}
@@ -985,10 +1040,10 @@ const TimeTracker: React.FC = () => {
                 </div>
 
                 {/* Pagination Controls */}
-                {entries.length > 0 && (
+                {filteredEntries.length > 0 && (
                   <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                     <div className="text-sm text-slate-600">
-                      Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, entries.length)}</span> of <span className="font-semibold">{entries.length}</span> entries
+                      Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, filteredEntries.length)}</span> of <span className="font-semibold">{filteredEntries.length}</span> entries
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1026,6 +1081,7 @@ const TimeTracker: React.FC = () => {
               </>
             )}
           </div>
+          </>
         )
       )}
 
@@ -1216,7 +1272,7 @@ const TimeTracker: React.FC = () => {
                     {selectedEntry.project?.color && (
                       <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: selectedEntry.project.color }} />
                     )}
-                    <p className="text-slate-900 font-medium">{typeof selectedEntry.project === 'string' ? selectedEntry.project : selectedEntry.project?.name || "—"}</p>
+                    <p className="text-slate-900 font-medium">{typeof selectedEntry.project === 'string' ? selectedEntry.project : selectedEntry.project?.name || "Others (General Work)"}</p>
                   </div>
                 </div>
                 <div>

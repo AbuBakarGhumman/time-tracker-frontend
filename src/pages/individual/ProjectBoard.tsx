@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { fetchBoard } from "../../api/boards";
 import type { BoardView, Task, BoardColumn } from "../../api/boards";
 import { KanbanBoard } from "../../components/kanban/KanbanBoard";
-import { KanbanList } from "../../components/kanban/KanbanList";
 import { TaskDetailPanel } from "../../components/kanban/TaskDetailPanel";
 import axios from "../../api/interceptor";
 import { API_BASE_URL } from "../../api/config";
 import { useAIAssistant } from "../../context/AIAssistantContext";
+import { getStoredUser } from "../../api/auth";
 
 const ProjectBoard: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -17,9 +17,11 @@ const ProjectBoard: React.FC = () => {
     const [board, setBoard] = useState<BoardView | null>(null);
     const [projectName, setProjectName] = useState<string>("");
     const [triggerAddColumn, setTriggerAddColumn] = useState(false);
-    const [view, setView] = useState<'board' | 'list'>('board');
     const [loading, setLoading] = useState(true);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [taskSearch, setTaskSearch] = useState("");
+    const [activeFilter, setActiveFilter] = useState<string>("all");
+    const currentUser = useMemo(() => getStoredUser(), []);
 
     useEffect(() => { loadBoard(); }, [id]);
 
@@ -83,28 +85,41 @@ const ProjectBoard: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="flex h-full flex-col p-6 space-y-4">
-                {/* Header skeleton */}
-                <div className="flex items-center justify-between animate-pulse">
-                    <div className="h-7 w-48 bg-slate-200 rounded" />
-                    <div className="flex gap-2">
-                        <div className="h-9 w-24 bg-slate-200 rounded-lg" />
-                        <div className="h-9 w-24 bg-slate-200 rounded-lg" />
+            <div className="flex flex-col h-[calc(100vh-100px)] overflow-hidden p-1 animate-pulse">
+                {/* Tab bar skeleton */}
+                <div className="flex gap-3 mb-3 items-center shrink-0">
+                    <div className="h-9 w-40 bg-slate-200 rounded-lg" />
+                    <div className="flex-1" />
+                    <div className="h-9 w-28 bg-slate-200 rounded-lg" />
+                </div>
+                {/* Search & filter bar skeleton */}
+                <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-3 shrink-0 flex items-center gap-3">
+                    <div className="flex-1 h-10 bg-slate-100 rounded-lg" />
+                    <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+                        {Array(4).fill(0).map((_, i) => (
+                            <div key={i} className="h-7 w-20 bg-slate-200 rounded-md" />
+                        ))}
                     </div>
                 </div>
                 {/* Columns skeleton */}
                 <div className="flex gap-4 flex-1 overflow-hidden">
                     {Array(4).fill(0).map((_, i) => (
-                        <div key={i} className="flex-shrink-0 w-72 bg-slate-100 rounded-xl p-4 animate-pulse">
-                            <div className="h-5 w-28 bg-slate-200 rounded mb-4" />
-                            <div className="space-y-3">
+                        <div key={i} className="flex-shrink-0 w-[300px] bg-slate-50 border border-slate-300 rounded-xl flex flex-col">
+                            {/* Column header */}
+                            <div className="px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl flex items-center gap-2">
+                                <div className="h-4 w-24 bg-slate-200 rounded" />
+                                <div className="h-5 w-6 bg-slate-100 rounded-full" />
+                            </div>
+                            {/* Task cards */}
+                            <div className="p-3 space-y-3">
                                 {Array(3 - i % 2).fill(0).map((_, j) => (
-                                    <div key={j} className="bg-white rounded-lg p-3 shadow-sm border border-slate-200">
-                                        <div className="h-4 w-full bg-slate-200 rounded mb-2" />
-                                        <div className="h-3 w-2/3 bg-slate-200 rounded mb-3" />
-                                        <div className="flex gap-2">
-                                            <div className="h-5 w-14 bg-slate-200 rounded-full" />
-                                            <div className="h-5 w-14 bg-slate-200 rounded-full" />
+                                    <div key={j} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+                                        <div className="h-4 w-3/4 bg-slate-200 rounded mb-2" />
+                                        <div className="h-3 w-full bg-slate-100 rounded mb-1" />
+                                        <div className="h-3 w-2/3 bg-slate-100 rounded mb-3" />
+                                        <div className="flex items-center justify-between">
+                                            <div className="h-5 w-14 bg-slate-200 rounded" />
+                                            <div className="h-4 w-16 bg-slate-100 rounded" />
                                         </div>
                                     </div>
                                 ))}
@@ -131,71 +146,91 @@ const ProjectBoard: React.FC = () => {
     }
 
     const projectId = parseInt(id as string, 10);
+    const today = new Date().toISOString().split("T")[0];
+    const filteredTasks = board.tasks.filter((t) => {
+        // Text search
+        if (taskSearch.trim()) {
+            const q = taskSearch.toLowerCase();
+            if (!t.title.toLowerCase().includes(q) && !(t.description && t.description.toLowerCase().includes(q))) return false;
+        }
+        // Filter
+        if (activeFilter === "assigned_to_me") return t.assigned_to_id === currentUser?.id;
+        if (activeFilter === "due_today") return t.due_date?.split("T")[0] === today;
+        if (activeFilter === "overdue") return t.due_date ? t.due_date.split("T")[0] < today && !t.is_completed : false;
+        if (activeFilter === "high_priority") return t.priority === "high" || t.priority === "urgent";
+        if (activeFilter === "unassigned") return t.assigned_to_id === null;
+        return true;
+    });
     const selectedColumn = selectedTask
         ? board.columns.find((c: BoardColumn) => c.id === selectedTask.column_id)
         : undefined;
 
     return (
-        <div className="relative flex flex-col h-[calc(100vh-100px)] overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 shrink-0">
-                {/* Board tab */}
+        <div className="relative flex flex-col h-[calc(100vh-100px)] overflow-hidden p-1">
+            {/* Tabs */}
+            <div className="flex gap-3 mb-3 flex-wrap items-center shrink-0">
                 <button
-                    onClick={() => setView('board')}
-                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
-                        view === 'board'
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                    }`}
+                    className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
                 >
                     {projectName ? `${projectName} Board` : "Board"}
                 </button>
-
-                {/* List tab */}
-                <button
-                    onClick={() => setView('list')}
-                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
-                        view === 'list'
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                    }`}
-                >
-                    {projectName ? `${projectName} List` : "List"}
-                </button>
-
                 <div className="flex-1" />
-
-                {view === 'board' && (
-                    <button
-                        onClick={() => setTriggerAddColumn(true)}
-                        className="flex items-center gap-2 px-5 py-2 rounded-lg font-semibold transition-all duration-200 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Column
-                    </button>
-                )}
+                <button
+                    onClick={() => setTriggerAddColumn(true)}
+                    className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 text-sm bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                >
+                    + Add Column
+                </button>
             </div>
 
-            {/* Board / List view */}
-            <div className={`flex-1 bg-slate-100 h-full ${view === 'board' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-                {view === 'board' ? (
-                    <KanbanBoard
-                        projectId={projectId}
-                        initialColumns={board.columns}
-                        initialTasks={board.tasks}
-                        onTaskClick={openTask}
-                        openAddColumn={triggerAddColumn}
-                        onAddColumnConsumed={() => setTriggerAddColumn(false)}
+            {/* Search & Filters */}
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-3 shrink-0 flex items-center gap-3">
+                <div className="relative flex-1">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                        type="text"
+                        placeholder="Search by task name or description..."
+                        value={taskSearch}
+                        onChange={(e) => setTaskSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     />
-                ) : (
-                    <KanbanList
-                        columns={board.columns}
-                        tasks={board.tasks}
-                        onTaskClick={openTask}
-                    />
-                )}
+                </div>
+                <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+                    {[
+                        { key: "all", label: "All Tasks" },
+                        { key: "assigned_to_me", label: "Assigned to Me" },
+                        { key: "due_today", label: "Due Today" },
+                        { key: "overdue", label: "Overdue" },
+                        { key: "high_priority", label: "High Priority" },
+                        { key: "unassigned", label: "Unassigned" },
+                    ].map((f) => (
+                        <button
+                            key={f.key}
+                            onClick={() => setActiveFilter(f.key)}
+                            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all whitespace-nowrap ${
+                                activeFilter === f.key
+                                    ? "bg-white text-slate-800 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Board view */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+            <KanbanBoard
+                projectId={projectId}
+                initialColumns={board.columns}
+                initialTasks={filteredTasks}
+                onTaskClick={openTask}
+                openAddColumn={triggerAddColumn}
+                onAddColumnConsumed={() => setTriggerAddColumn(false)}
+            />
             </div>
 
             {/* Task Detail Slide-in Panel */}

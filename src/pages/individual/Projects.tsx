@@ -31,6 +31,8 @@ const Projects: React.FC = () => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [ownershipFilter, setOwnershipFilter] = useState<"all" | "owned" | "shared">("all");
   const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     name: "",
@@ -186,11 +188,20 @@ const Projects: React.FC = () => {
     setSelectedProject(null);
   };
 
-  // Pagination logic
-  const totalPages = Math.ceil(projects.length / itemsPerPage);
+  // Filter + Pagination logic
+  const filteredProjects = projects.filter((p) => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (!p.name.toLowerCase().includes(q) && !(p.description || "").toLowerCase().includes(q)) return false;
+    }
+    if (ownershipFilter === "owned" && !p.is_owner) return false;
+    if (ownershipFilter === "shared" && p.is_owner) return false;
+    return true;
+  });
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedProjects = projects.slice(startIndex, endIndex);
+  const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
 
   const handlePreviousPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -210,23 +221,48 @@ const Projects: React.FC = () => {
 
   return (
     <div className="p-1">
-      {/* Tabs - Matching TimeTracker Style */}
-      <div className="flex gap-4 mb-6 flex-wrap items-center justify-between">
-        <button
-          className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-        >
-          My Projects
-        </button>
+      {/* Tabs */}
+      <div className="flex gap-3 mb-6 flex-wrap items-center">
+        {(["all", "owned", "shared"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => { setOwnershipFilter(f); setCurrentPage(1); }}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 text-sm ${
+              ownershipFilter === f
+                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+            }`}
+          >
+            {f === "all" ? "All Projects" : f === "owned" ? "My Projects" : "Shared With Me"}
+          </button>
+        ))}
+        <div className="flex-1" />
         <button
           onClick={() => {
             setEditingProject(null);
             setFormData({ name: "", description: "", color: "#3b82f6" });
             setShowCreateModal(true);
           }}
-          className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+          className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 text-sm bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
         >
           + New Project
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            placeholder="Search by project name or description..."
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+          />
+        </div>
       </div>
 
       {/* Projects Table */}
@@ -234,16 +270,12 @@ const Projects: React.FC = () => {
         <SkeletonTable rows={5} />
       ) : (
         <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-            <h2 className="text-xl font-bold text-slate-900">All Projects</h2>
-          </div>
-
-          {projects.length === 0 ? (
+          {filteredProjects.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01m-3-5h.01m-.01 4h.01" />
               </svg>
-              <p>No Projects Yet</p>
+              <p>{search || ownershipFilter !== "all" ? "No projects match your filters" : "No Projects Yet"}</p>
             </div>
           ) : (
             <>
@@ -369,10 +401,10 @@ const Projects: React.FC = () => {
               </div>
 
               {/* Pagination Controls */}
-              {projects.length > 0 && (
+              {filteredProjects.length > 0 && (
                 <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                   <div className="text-sm text-slate-600">
-                    Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, projects.length)}</span> of <span className="font-semibold">{projects.length}</span> projects
+                    Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, filteredProjects.length)}</span> of <span className="font-semibold">{filteredProjects.length}</span> projects
                   </div>
                   <div className="flex items-center gap-2">
                     <button

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../api/interceptor";
 import { useNavigate } from "react-router-dom";
-import { getStoredUser } from "../../api/auth";
+import { getStoredPlatformAdmin } from "../../api/auth";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../api/config";
 import type { User } from "../../api/auth";
-import AnalogClockIcon from "../../components/AnalogClockIcon";
 import { CacheManager } from "../../utils/cacheManager";
 
-const Profile: React.FC = () => {
+const PlatformProfile: React.FC = () => {
   const { updateUser: updateContextUser } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
@@ -17,8 +16,6 @@ const Profile: React.FC = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
-    job_title: "",
-    department: "",
   });
   const [passwordData, setPasswordData] = useState({
     current_password: "",
@@ -37,8 +34,8 @@ const Profile: React.FC = () => {
   };
 
   useEffect(() => {
-    const storedUser = getStoredUser();
-    if (!storedUser) {
+    const storedAdmin = getStoredPlatformAdmin();
+    if (!storedAdmin) {
       navigate("/login");
       return;
     }
@@ -51,8 +48,6 @@ const Profile: React.FC = () => {
           setUser(cachedProfile);
           setFormData({
             full_name: cachedProfile.full_name || "",
-            job_title: cachedProfile.job_title || "",
-            department: cachedProfile.department || "",
           });
           setIsInitialLoading(false);
           return;
@@ -66,16 +61,13 @@ const Profile: React.FC = () => {
         setUser(userData);
         setFormData({
           full_name: userData.full_name || "",
-          job_title: userData.job_title || "",
-          department: userData.department || "",
         });
       } catch (error) {
         console.error("Failed to load user profile:", error);
-        setUser(storedUser);
+        const fallback = storedAdmin as unknown as User;
+        setUser(fallback);
         setFormData({
-          full_name: storedUser.full_name || "",
-          job_title: storedUser.job_title || "",
-          department: storedUser.department || "",
+          full_name: fallback.full_name || "",
         });
       } finally {
         setIsInitialLoading(false);
@@ -111,8 +103,6 @@ const Profile: React.FC = () => {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("full_name", formData.full_name);
-      formDataToSend.append("job_title", formData.job_title);
-      formDataToSend.append("department", formData.department);
 
       if (selectedFile) {
         formDataToSend.append("file", selectedFile);
@@ -206,7 +196,7 @@ const Profile: React.FC = () => {
             <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 animate-pulse">
               <div className="h-6 bg-slate-200 rounded w-1/3 mb-6 pb-4 border-b border-slate-100" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[1, 2, 3, 4].map((i) => (
+                {[1, 2].map((i) => (
                   <div key={i}>
                     <div className="h-3 bg-slate-200 rounded w-2/3 mb-2" />
                     <div className="h-4 bg-slate-200 rounded w-3/4" />
@@ -237,13 +227,12 @@ const Profile: React.FC = () => {
       <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl px-6 py-4 mb-6 text-white shadow-xl">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <AnalogClockIcon size={50} className="flex-shrink-0" />
             <div>
               <p className="text-base font-bold text-white mb-1 flex items-center gap-2">
-                Profile
+                Admin Profile
               </p>
               <p className="text-sm text-white/90">
-                View and manage your personal information and account settings
+                View and manage your platform admin account
               </p>
             </div>
           </div>
@@ -265,8 +254,7 @@ const Profile: React.FC = () => {
             </div>
 
             <h2 className="text-2xl font-bold text-slate-900 mb-1">{user.full_name}</h2>
-            <p className="text-slate-600 mb-1">{user.job_title || "No job title"}</p>
-            <p className="text-sm text-slate-500">{user.department || "No department"}</p>
+            <p className="text-slate-600 mb-1">Platform Admin</p>
             <p className="text-sm text-slate-500 mt-2">{user.email}</p>
 
             <button
@@ -274,12 +262,6 @@ const Profile: React.FC = () => {
               className="w-full mt-6 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200"
             >
               Edit Profile
-            </button>
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              className="w-full mt-3 px-6 py-2 bg-white text-slate-700 font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 transition-all duration-200"
-            >
-              Change Password
             </button>
           </div>
         </div>
@@ -299,14 +281,6 @@ const Profile: React.FC = () => {
                 <p className="text-sm text-slate-600 font-semibold mb-2">Email Address</p>
                 <p className="text-base text-slate-900">{user.email}</p>
               </div>
-              <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Job Title</p>
-                <p className="text-base text-slate-900">{user.job_title || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Department</p>
-                <p className="text-base text-slate-900">{user.department || "N/A"}</p>
-              </div>
             </div>
           </div>
 
@@ -321,7 +295,11 @@ const Profile: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-slate-600 font-semibold mb-2">Role</p>
-                <p className="text-base text-slate-900 capitalize">{user.role || "Employee"}</p>
+                <p className="text-base text-slate-900">Platform Admin</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 font-semibold mb-2">Account Type</p>
+                <p className="text-base text-slate-900">platform_admin</p>
               </div>
             </div>
           </div>
@@ -390,28 +368,6 @@ const Profile: React.FC = () => {
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Job Title</label>
-                  <input
-                    type="text"
-                    name="job_title"
-                    value={formData.job_title}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Department</label>
-                  <input
-                    type="text"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                </div>
               </div>
             </div>
 
@@ -423,8 +379,6 @@ const Profile: React.FC = () => {
                   setLocalPreview(null);
                   setFormData({
                     full_name: user.full_name || "",
-                    job_title: user.job_title || "",
-                    department: user.department || "",
                   });
                 }}
                 className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
@@ -446,8 +400,8 @@ const Profile: React.FC = () => {
       {/* Password Change Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex-shrink-0 bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="text-xl font-bold">Change Password</h3>
               <button
                 onClick={() => {
@@ -472,7 +426,7 @@ const Profile: React.FC = () => {
                     value={passwordData.current_password}
                     onChange={handlePasswordChange}
                     placeholder="Enter your current password"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
 
@@ -484,7 +438,7 @@ const Profile: React.FC = () => {
                     value={passwordData.new_password}
                     onChange={handlePasswordChange}
                     placeholder="Enter new password (min 8 characters)"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
 
@@ -496,7 +450,7 @@ const Profile: React.FC = () => {
                     value={passwordData.confirm_password}
                     onChange={handlePasswordChange}
                     placeholder="Confirm new password"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all"
                   />
                   {passwordData.new_password && passwordData.confirm_password && passwordData.new_password !== passwordData.confirm_password && (
                     <p className="text-sm text-red-600 mt-1">Passwords do not match</p>
@@ -518,7 +472,7 @@ const Profile: React.FC = () => {
               <button
                 onClick={handleChangePassword}
                 disabled={loading}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+                className="px-6 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
               >
                 {loading ? "Updating..." : "Change Password"}
               </button>
@@ -530,4 +484,4 @@ const Profile: React.FC = () => {
   );
 };
 
-export default Profile;
+export default PlatformProfile;

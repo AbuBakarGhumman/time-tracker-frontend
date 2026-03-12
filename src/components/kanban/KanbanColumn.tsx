@@ -140,7 +140,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             <div
                 ref={setNodeRef}
                 style={{ ...style, minHeight: '100%' }}
-                className="bg-slate-50 border border-slate-200 rounded-xl w-[300px] min-w-[300px] flex flex-col"
+                className="bg-slate-50 border border-slate-300 rounded-xl w-[300px] min-w-[300px] flex flex-col"
             >
                 {/* ── HEADER ── */}
                 <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-white rounded-t-xl shrink-0">

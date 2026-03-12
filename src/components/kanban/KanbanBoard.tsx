@@ -291,7 +291,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     };
 
     return (
-        <div className="flex w-full h-full overflow-x-auto p-4 gap-4 items-stretch">
+        <div className="flex w-full h-full overflow-x-auto gap-4 items-stretch">
             <DndContext
                 sensors={sensors}
                 collisionDetection={collisionDetection}

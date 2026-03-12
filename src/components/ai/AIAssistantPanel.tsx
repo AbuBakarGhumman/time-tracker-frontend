@@ -8,12 +8,30 @@ import { invalidateBoardCache } from "../../api/boards";
 import { CacheManager } from "../../utils/cacheManager";
 import { fetchProjects } from "../../api/timeentries";
 import type { ProjectResponse } from "../../api/timeentries";
+import { getUserType } from "../../api/auth";
 
-const QUICK_ACTIONS = [
+const INDIVIDUAL_QUICK_ACTIONS = [
   { label: "Create a project", prompt: "I want to create a new project." },
   { label: "Project status", prompt: "What's the status of my projects?" },
   { label: "Add tasks", prompt: "I want to add some tasks." },
 ];
+
+const PLATFORM_ADMIN_QUICK_ACTIONS = [
+  { label: "Platform stats", prompt: "Show me the platform statistics." },
+  { label: "List users", prompt: "Show me all users on the platform." },
+  { label: "List companies", prompt: "Show me all companies on the platform." },
+];
+
+const WELCOME_TEXT: Record<string, { heading: string; description: string }> = {
+  platform_admin: {
+    heading: "How can I help you?",
+    description: "I can help you manage users, companies, view platform analytics, and monitor onboarding trends.",
+  },
+  default: {
+    heading: "How can I help you?",
+    description: "I can create projects, add tasks, parse documents, and manage your board.",
+  },
+};
 
 const MIN_WIDTH = 360;
 const PADDING = 16;
@@ -581,28 +599,35 @@ const AIAssistantPanel: React.FC = () => {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-100 to-blue-100 dark:from-violet-900/30 dark:to-blue-900/30 flex items-center justify-center mb-3">
-                  <svg className="w-7 h-7 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <h4 className="text-slate-800 dark:text-slate-200 font-semibold text-sm mb-1">How can I help you?</h4>
-                <p className="text-slate-500 dark:text-slate-400 text-xs mb-4">
-                  I can create projects, add tasks, parse documents, and manage your board.
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {QUICK_ACTIONS.map((action) => (
-                    <button
-                      key={action.label}
-                      onClick={() => handleQuickAction(action.prompt)}
-                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs rounded-full transition-colors"
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              (() => {
+                const userType = getUserType();
+                const quickActions = userType === "platform_admin" ? PLATFORM_ADMIN_QUICK_ACTIONS : INDIVIDUAL_QUICK_ACTIONS;
+                const welcome = WELCOME_TEXT[userType || "default"] || WELCOME_TEXT.default;
+                return (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-100 to-blue-100 dark:from-violet-900/30 dark:to-blue-900/30 flex items-center justify-center mb-3">
+                      <svg className="w-7 h-7 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-slate-800 dark:text-slate-200 font-semibold text-sm mb-1">{welcome.heading}</h4>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs mb-4">
+                      {welcome.description}
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {quickActions.map((action) => (
+                        <button
+                          key={action.label}
+                          onClick={() => handleQuickAction(action.prompt)}
+                          className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs rounded-full transition-colors"
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()
             ) : (
               <>
                 {messages.map((msg) => (

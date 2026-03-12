@@ -1,0 +1,362 @@
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../api/config";
+import { logout, getStoredPlatformAdmin } from "../api/auth";
+import { useUser } from "../context/UserContext";
+import AIAssistantButton from "./ai/AIAssistantButton";
+import { useAIAssistant } from "../context/AIAssistantContext";
+
+interface PlatformAdminLayoutProps {
+  children: React.ReactNode;
+}
+
+const LG_BREAKPOINT_PX = 1024;
+
+const navItems = [
+  { name: "Dashboard", path: "/platform/admin-dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
+  { name: "Users", path: "/platform/users", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
+  { name: "Companies", path: "/platform/companies", icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" },
+  { name: "Analytics", path: "/platform/analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+  { name: "Profile", path: "/platform/profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
+  { name: "Settings", path: "/platform/settings", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+];
+
+const PlatformAdminLayout: React.FC<PlatformAdminLayoutProps> = ({ children }) => {
+  const { setUser: setContextUser } = useUser();
+  const { clearChat, closePanel } = useAIAssistant();
+  const [admin, setAdmin] = useState<any>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showGreeting, setShowGreeting] = useState(false);
+  const [greetingVisible, setGreetingVisible] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedAdmin = getStoredPlatformAdmin();
+    if (!storedAdmin) {
+      navigate("/login");
+      return;
+    }
+    setAdmin(storedAdmin);
+
+    // Check if greeting was already shown in this session
+    const greetingShown = sessionStorage.getItem("_platformAdminGreetingShown");
+    if (!greetingShown) {
+      setShowGreeting(true);
+      sessionStorage.setItem("_platformAdminGreetingShown", "true");
+    }
+  }, [navigate]);
+
+  const resolvedProfilePicUrl = admin?.profile_pic_url ? `${API_BASE_URL}${admin.profile_pic_url}` : null;
+
+  useEffect(() => {
+    if (!admin) return;
+    const t1 = setTimeout(() => setGreetingVisible(true), 300);
+    const t2 = setTimeout(() => setGreetingVisible(false), 3500);
+    const t3 = setTimeout(() => setShowGreeting(false), 4200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [admin]);
+
+  // Keep collapse state desktop-only
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth < LG_BREAKPOINT_PX) {
+        setCollapsed(false);
+        setMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const handleLogout = async () => {
+    // Clear greeting flag so it shows again on next login
+    sessionStorage.removeItem("_platformAdminGreetingShown");
+    clearChat();
+    closePanel();
+    setContextUser(null);
+    await logout();
+    navigate("/login");
+  };
+
+  if (!admin) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  const firstName = admin.full_name?.split(" ")[0] || "Admin";
+
+  const handleHeaderMenuClick = () => {
+    if (window.innerWidth >= LG_BREAKPOINT_PX) {
+      setCollapsed((c) => !c);
+    } else {
+      setMobileSidebarOpen(true);
+    }
+  };
+
+  // ── Tooltip wrapper — only renders when sidebar is collapsed ──────────
+  const NavTooltip = ({ label }: { label: string }) => (
+    <div
+      className="
+        absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50
+        px-2.5 py-1.5 bg-slate-700 text-white text-xs font-medium rounded-md
+        whitespace-nowrap pointer-events-none
+        opacity-0 group-hover:opacity-100
+        transition-opacity duration-150
+      "
+    >
+      {label}
+      <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-700" />
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-50 dark:bg-[#0d1117] overflow-hidden">
+      {/* ── TOP HEADER ─────────────────────────────────────────────────── */}
+      <header className="flex-shrink-0 bg-slate-900 dark:bg-[#010409] border-b border-slate-800 dark:border-[#30363d] px-[20px] h-16 flex items-center justify-between z-50">
+        {/* LEFT — Brand */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleHeaderMenuClick}
+            className="p-0.5 hover:bg-slate-800 rounded-lg transition-colors mr-1"
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+          >
+            <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          <span className="text-[22px] font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
+            TimeTrack Pro
+          </span>
+
+          <div className="hidden md:block w-px h-6 bg-slate-700" />
+          <div className="hidden md:flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-blue-600/30 flex items-center justify-center">
+              <svg className="w-3.5 h-3.5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <span className="text-sm font-medium text-blue-300">Platform Admin</span>
+          </div>
+        </div>
+
+        {/* RIGHT — greeting + user + avatar */}
+        <div className="flex items-center gap-4">
+          {showGreeting && (
+            <div
+              className="hidden sm:block"
+              style={{
+                transition: "opacity 0.6s ease, transform 0.6s ease",
+                opacity: greetingVisible ? 1 : 0,
+                transform: greetingVisible ? "translateY(0px)" : "translateY(8px)",
+              }}
+            >
+              <p className="text-sm text-slate-300 leading-tight whitespace-nowrap">
+                Welcome back, <span className="font-semibold text-white">{firstName}!</span>
+              </p>
+            </div>
+          )}
+
+          {showGreeting && (
+            <div
+              className="hidden sm:block w-px h-5 bg-slate-700"
+              style={{ transition: "opacity 0.6s ease", opacity: greetingVisible ? 1 : 0 }}
+            />
+          )}
+
+          <div className="hidden sm:block text-right">
+            <p className="text-sm font-semibold text-white leading-tight">{admin.full_name}</p>
+            <p className="text-xs text-slate-400 leading-tight">Super Admin</p>
+          </div>
+
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden border-2 border-white/20 flex-shrink-0">
+            {resolvedProfilePicUrl ? (
+              <img src={resolvedProfilePicUrl} alt={admin.full_name} className="w-full h-full object-cover" />
+            ) : (
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ── BELOW HEADER: SIDEBAR + BODY ─────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── DESKTOP SIDEBAR — collapsible ─────────────────────────────── */}
+        <aside
+          className={`
+            hidden lg:flex flex-col flex-shrink-0 relative
+            bg-slate-900 dark:bg-[#010409] border-r border-slate-800 dark:border-[#30363d]
+            transition-[width] duration-300 ease-in-out overflow-hidden
+            ${collapsed ? "w-16" : "w-52"}
+          `}
+        >
+          {/* Nav links */}
+          <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path;
+
+              return (
+                <div key={item.path} className="relative group">
+                  <Link
+                    to={item.path}
+                    className={`
+                      flex items-center rounded-lg transition-all duration-200 text-sm font-medium
+                      px-3.5 py-2.5
+                      ${isActive
+                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-900/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800"
+                      }
+                    `}
+                  >
+                    {/* Icon always same X position (no center on collapse) */}
+                    <span className="w-8 flex justify-start flex-shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                      </svg>
+                    </span>
+
+                    {/* Text hides/reveals, icon never moves */}
+                    <span
+                      className="whitespace-nowrap overflow-hidden transition-all duration-300"
+                      style={{
+                        maxWidth: collapsed ? "0px" : "200px",
+                        opacity: collapsed ? 0 : 1,
+                      }}
+                    >
+                      {item.name}
+                    </span>
+                  </Link>
+
+                  {collapsed && <NavTooltip label={item.name} />}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Logout */}
+          <div className="px-2 pb-3 border-t border-slate-800 dark:border-[#30363d] pt-3">
+            <div className="relative group">
+              <button
+                onClick={handleLogout}
+                className="
+                  w-full flex items-center rounded-lg transition-all duration-200 text-sm font-medium
+                  text-slate-400 hover:text-red-400 hover:bg-red-500/10
+                  px-3.5 py-2.5
+                "
+              >
+                <span className="w-8 flex justify-start flex-shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </span>
+
+                <span
+                  className="whitespace-nowrap overflow-hidden transition-all duration-300"
+                  style={{
+                    maxWidth: collapsed ? "0px" : "200px",
+                    opacity: collapsed ? 0 : 1,
+                  }}
+                >
+                  Logout
+                </span>
+              </button>
+
+              {collapsed && <NavTooltip label="Logout" />}
+            </div>
+          </div>
+        </aside>
+
+        {/* ── MOBILE SIDEBAR — overlay ─────────────────────────────────── */}
+        <aside
+          className={`
+            fixed inset-y-0 left-0 z-40 w-52 bg-slate-900 dark:bg-[#010409] border-r border-slate-800 dark:border-[#30363d]
+            transform transition-transform duration-300 ease-in-out lg:hidden
+            ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          `}
+          style={{ top: "4rem" }}
+        >
+          <div className="flex flex-col h-full py-4">
+            <nav className="flex-1 px-2 space-y-1 overflow-y-auto">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className={`
+                      flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium
+                      ${isActive
+                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-900/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800"
+                      }
+                    `}
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                    </svg>
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="px-2 pt-3 border-t border-slate-800 dark:border-[#30363d]">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200 text-sm font-medium"
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                Logout
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Mobile backdrop */}
+        {mobileSidebarOpen && (
+          <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
+        )}
+
+        {/* ── MAIN BODY ────────────────────────────────────────────────── */}
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0d1117] relative">
+          <div className="p-4">{children}</div>
+        </main>
+      </div>
+      {/* AI Assistant — fixed position, outside scrollable area */}
+      <AIAssistantButton />
+    </div>
+  );
+};
+
+export default PlatformAdminLayout;

@@ -12,6 +12,7 @@ import { AIAssistantProvider } from "./context/AIAssistantContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import DashboardLayout from "./components/DashboardLayout";
+import PlatformAdminLayout from "./components/PlatformAdminLayout";
 
 import Intro from "./pages/site/Intro";
 import Login from "./pages/site/Login";
@@ -38,6 +39,14 @@ import HRDashboard from "./pages/company/hr/HrDashboard";
 import ManagerDashboard from "./pages/company/manager/ManagerDashboard";
 import TeamDashboard from "./pages/company/teamlead/TeamLeadDashboard";
 import EmployeeDashboard from "./pages/company/employee/EmployeeDashboard";
+
+// Platform Admin
+import PlatformDashboard from "./pages/platform_admin/PlatformDashboard";
+import PlatformUsers from "./pages/platform_admin/PlatformUsers";
+import PlatformCompanies from "./pages/platform_admin/PlatformCompanies";
+import PlatformAnalytics from "./pages/platform_admin/PlatformAnalytics";
+import PlatformProfile from "./pages/platform_admin/PlatformProfile";
+import PlatformSettings from "./pages/platform_admin/PlatformSettings";
 
 import { getStoredToken } from "./api/auth";
 import axios from "./api/interceptor";
@@ -114,6 +123,14 @@ function App() {
             <Route path="/company/manager-dashboard" element={<ProtectedRoute element={<ManagerDashboard />} />} />
             <Route path="/company/team-dashboard" element={<ProtectedRoute element={<TeamDashboard />} />} />
             <Route path="/company/employee-dashboard" element={<ProtectedRoute element={<EmployeeDashboard />} />} />
+
+            {/* Platform Admin */}
+            <Route path="/platform/admin-dashboard" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformDashboard /></PlatformAdminLayout>} />} />
+            <Route path="/platform/users" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformUsers /></PlatformAdminLayout>} />} />
+            <Route path="/platform/companies" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformCompanies /></PlatformAdminLayout>} />} />
+            <Route path="/platform/analytics" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformAnalytics /></PlatformAdminLayout>} />} />
+            <Route path="/platform/profile" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformProfile /></PlatformAdminLayout>} />} />
+            <Route path="/platform/settings" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformSettings /></PlatformAdminLayout>} />} />
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />

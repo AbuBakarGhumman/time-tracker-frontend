@@ -48,7 +48,7 @@ export interface TimeEntry {
   status: "active" | "completed";
   notes?: string;
   description?: string;
-  is_billable?: number;
+  is_billable?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -74,7 +74,7 @@ export interface ManualEntryPayload {
   category?: string;
   start_time: string; // ISO format
   end_time: string; // ISO format
-  is_billable?: number;
+  is_billable?: boolean;
   notes?: string;
 }
 
@@ -84,7 +84,7 @@ export interface AutomaticEntryPayload {
   project_id?: number;  // Foreign key to project
   task_id?: number;
   category?: string;
-  is_billable?: number;
+  is_billable?: boolean;
   notes?: string;
 }
 
