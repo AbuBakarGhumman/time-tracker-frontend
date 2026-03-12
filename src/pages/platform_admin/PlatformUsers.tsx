@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { getStoredPlatformAdmin } from "../../api/auth";
 import { getUsers, toggleUserActive } from "../../api/platform_admin";
 import type { PlatformUser } from "../../api/platform_admin";
+import { API_BASE_URL } from "../../api/config";
 
 const PlatformUsers: React.FC = () => {
   const [users, setUsers] = useState<PlatformUser[]>([]);
@@ -12,7 +13,7 @@ const PlatformUsers: React.FC = () => {
   const [accountTypeFilter, setAccountTypeFilter] = useState<string>("all");
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const limit = 20;
+  const limit = 10;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -190,11 +191,15 @@ const PlatformUsers: React.FC = () => {
                       <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                              <span className="text-white text-xs font-bold">
-                                {u.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                              </span>
-                            </div>
+                            {u.profile_pic_url ? (
+                              <img src={`${API_BASE_URL}${u.profile_pic_url}`} alt={u.full_name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                                <span className="text-white text-xs font-bold">
+                                  {u.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                                </span>
+                              </div>
+                            )}
                             <div>
                               <p className="text-sm font-medium text-slate-900">{u.full_name}</p>
                               <p className="text-xs text-slate-500">{u.email}</p>
@@ -229,7 +234,6 @@ const PlatformUsers: React.FC = () => {
               </div>
 
               {/* Pagination */}
-              {totalPages > 1 && (
                 <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                   <div className="text-sm text-slate-600">
                     Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{endIndex}</span> of <span className="font-semibold">{total}</span>
@@ -270,7 +274,6 @@ const PlatformUsers: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              )}
             </>
           )}
         </div>

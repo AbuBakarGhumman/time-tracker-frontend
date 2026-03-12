@@ -18,6 +18,7 @@ export interface BoardColumn {
 
 export interface Task {
   id: number;
+  task_number: number;
   project_id: number;
   column_id: number;
   title: string;

@@ -99,7 +99,7 @@ export const NotificationBell: React.FC = () => {
   const handleItemClick = async (n: AppNotification) => {
     await handleMarkRead(n);
     setOpen(false);
-    if (n.type === "task_mention" && n.data?.project_id && n.data?.task_id) {
+    if ((n.type === "task_mention" || n.type === "task_assignment") && n.data?.project_id && n.data?.task_id) {
       navigate(`/projects/${n.data.project_id}/board?task=${n.data.task_id}`);
     } else {
       navigate("/notifications", { state: { highlightId: n.id } });
@@ -257,6 +257,7 @@ const NotificationItem: React.FC<ItemProps> = ({ n, actionId, onRead, onAccept, 
           n.type === "project_invitation" ? "bg-blue-500/20 text-blue-400" :
           n.type === "alert" ? "bg-red-500/20 text-red-400" :
           n.type === "task_mention" ? "bg-purple-500/20 text-purple-400" :
+          n.type === "task_assignment" ? "bg-amber-500/20 text-amber-400" :
           "bg-green-500/20 text-green-400"
         }`}>
           {n.type === "project_invitation" ? (
@@ -270,6 +271,10 @@ const NotificationItem: React.FC<ItemProps> = ({ n, actionId, onRead, onAccept, 
           ) : n.type === "task_mention" ? (
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9" />
+            </svg>
+          ) : n.type === "task_assignment" ? (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
           ) : (
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

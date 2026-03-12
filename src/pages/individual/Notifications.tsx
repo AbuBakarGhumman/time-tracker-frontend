@@ -49,6 +49,12 @@ const TYPE_META: Record<string, { label: string; badge: string; icon: string; do
     icon: "bg-purple-100 text-purple-600",
     dot: "bg-purple-500",
   },
+  task_assignment: {
+    label: "Assignment",
+    badge: "bg-amber-100 text-amber-700",
+    icon: "bg-amber-100 text-amber-600",
+    dot: "bg-amber-500",
+  },
 };
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -282,7 +288,7 @@ const Notifications: React.FC = () => {
                   id={`notif-${n.id}`}
                   onClick={() => {
                     if (!isPending) handleMarkRead(n);
-                    if (n.type === "task_mention" && n.data?.project_id && n.data?.task_id) {
+                    if ((n.type === "task_mention" || n.type === "task_assignment") && n.data?.project_id && n.data?.task_id) {
                       navigate(`/projects/${n.data.project_id}/board?task=${n.data.task_id}`);
                     }
                   }}
@@ -312,6 +318,11 @@ const Notifications: React.FC = () => {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9" />
+                      </svg>
+                    ) : n.type === "task_assignment" ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
                     ) : (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

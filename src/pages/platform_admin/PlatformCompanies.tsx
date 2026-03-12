@@ -12,7 +12,7 @@ const PlatformCompanies: React.FC = () => {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const limit = 20;
+  const limit = 10;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -200,50 +200,47 @@ const PlatformCompanies: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 px-6 py-4 flex items-center justify-between">
-            <div className="text-sm text-slate-600">
-              Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{endIndex}</span> of <span className="font-semibold">{total}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              <div className="flex items-center gap-1">
-                {getPageNumbers().map((page, i) =>
-                  page === "..." ? (
-                    <span key={`dots-${i}`} className="px-2 text-slate-400">...</span>
-                  ) : (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page as number)}
-                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                        currentPage === page
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                          : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                <div className="text-sm text-slate-600">
+                  Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{endIndex}</span> of <span className="font-semibold">{total}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {getPageNumbers().map((page, i) =>
+                      page === "..." ? (
+                        <span key={`dots-${i}`} className="px-2 text-slate-400">...</span>
+                      ) : (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page as number)}
+                          className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                            currentPage === page
+                              ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                              : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
-            </div>
           </div>
         )}
     </div>

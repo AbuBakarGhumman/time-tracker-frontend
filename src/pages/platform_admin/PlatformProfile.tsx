@@ -103,6 +103,8 @@ const PlatformProfile: React.FC = () => {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("full_name", formData.full_name);
+      formDataToSend.append("job_title", user?.job_title || "");
+      formDataToSend.append("department", user?.department || "");
 
       if (selectedFile) {
         formDataToSend.append("file", selectedFile);
@@ -124,7 +126,12 @@ const PlatformProfile: React.FC = () => {
       setLocalPreview(null);
       alert("Profile updated successfully!");
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to update profile");
+      const detail = error?.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        alert(detail.map((d: any) => d.msg || JSON.stringify(d)).join("\n"));
+      } else {
+        alert(detail || "Failed to update profile");
+      }
     } finally {
       setLoading(false);
     }
