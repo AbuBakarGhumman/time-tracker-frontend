@@ -20,7 +20,6 @@ import Register from "./pages/site/Register";
 
 import Home from "./pages/individual/Home";
 import TimeTracker from "./pages/individual/TimeTracker";
-import Analytics from "./pages/individual/Analytics";
 import Reports from "./pages/individual/Reports";
 import Projects from "./pages/individual/Projects";
 import ProjectBoard from "./pages/individual/ProjectBoard";
@@ -108,7 +107,6 @@ function App() {
             {/* Protected Routes */}
             <Route path="/dashboard" element={<ProtectedRoute element={<DashboardLayout><Home /></DashboardLayout>} />} />
             <Route path="/time-tracker" element={<ProtectedRoute element={<DashboardLayout><TimeTracker /></DashboardLayout>} />} />
-            <Route path="/analytics" element={<ProtectedRoute element={<DashboardLayout><Analytics /></DashboardLayout>} />} />
             <Route path="/reports" element={<ProtectedRoute element={<DashboardLayout><Reports /></DashboardLayout>} />} />
             <Route path="/projects" element={<ProtectedRoute element={<DashboardLayout><Projects /></DashboardLayout>} />} />
             <Route path="/projects/:id/board" element={<ProtectedRoute element={<DashboardLayout><ProjectBoard /></DashboardLayout>} />} />

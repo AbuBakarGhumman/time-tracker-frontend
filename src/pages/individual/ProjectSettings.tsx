@@ -201,22 +201,9 @@ const ProjectSettings: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        <SkeletonCard className="h-24" />
-        <div className="flex gap-4 mb-4">
-          <div className="h-10 w-28 bg-slate-200 rounded-lg animate-pulse" />
-          <div className="h-10 w-28 bg-slate-200 rounded-lg animate-pulse" />
-        </div>
-        <SkeletonTable rows={4} />
-      </div>
-    );
-  }
+  if (!project && !loading) return null;
 
-  if (!project) return null;
-
-  const isManager = project.is_owner || project.member_role === "admin";
+  const isManager = project?.is_owner || project?.member_role === "admin";
 
   const TABS: { key: Tab; label: string }[] = [
     { key: "members", label: "Members" },
@@ -226,7 +213,7 @@ const ProjectSettings: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-1">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Tab Selector — Reports-style pill buttons */}
+        {/* Tab Selector */}
         <div className="flex gap-3 mb-6 flex-wrap">
           {TABS.map((tab) => (
             <button
@@ -243,6 +230,13 @@ const ProjectSettings: React.FC = () => {
           ))}
         </div>
 
+        {loading ? (
+          <div className="space-y-6">
+            <SkeletonCard className="h-24" />
+            <SkeletonTable rows={4} />
+          </div>
+        ) : (
+        <>
         {/* ── MEMBERS TAB ──────────────────────────────────────── */}
         {activeTab === "members" && (
           <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
@@ -572,6 +566,8 @@ const ProjectSettings: React.FC = () => {
               )}
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

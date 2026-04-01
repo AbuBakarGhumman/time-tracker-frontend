@@ -240,14 +240,17 @@ export const fetchAttendanceReport = async (startDate: string, endDate: string):
 /**
  * Fetch work daily report for date range
  */
-export const fetchWorkDailyReport = async (startDate: string, endDate: string): Promise<any> => {
+export const fetchWorkDailyReport = async (
+  startDate: string, endDate: string,
+  filters?: { project_id?: number; billable?: string }
+): Promise<any> => {
   try {
+    const params: Record<string, any> = { start_date: startDate, end_date: endDate };
+    if (filters?.project_id) params.project_id = filters.project_id;
+    if (filters?.billable) params.billable = filters.billable;
     return await getWithCache<any>(
       `${API_BASE_URL}/reports/work-daily`,
-      {
-        cacheKey: "reports/work-daily",
-        params: { start_date: startDate, end_date: endDate }
-      }
+      { cacheKey: "reports/work-daily", params }
     );
   } catch (error: any) {
     console.error("Failed to fetch work daily report:", error);
@@ -258,18 +261,62 @@ export const fetchWorkDailyReport = async (startDate: string, endDate: string): 
 /**
  * Fetch project breakdown report for date range
  */
-export const fetchProjectBreakdown = async (startDate: string, endDate: string): Promise<any> => {
+export const fetchProjectBreakdown = async (
+  startDate: string, endDate: string,
+  filters?: { project_id?: number; billable?: string }
+): Promise<any> => {
   try {
+    const params: Record<string, any> = { start_date: startDate, end_date: endDate };
+    if (filters?.project_id) params.project_id = filters.project_id;
+    if (filters?.billable) params.billable = filters.billable;
     return await getWithCache<any>(
       `${API_BASE_URL}/reports/project-breakdown`,
-      {
-        cacheKey: "reports/project-breakdown",
-        params: { start_date: startDate, end_date: endDate }
-      }
+      { cacheKey: "reports/project-breakdown", params }
     );
   } catch (error: any) {
     console.error("Failed to fetch project breakdown:", error);
     throw new Error(error?.response?.data?.detail || "Failed to fetch project breakdown");
+  }
+};
+
+/**
+ * Fetch productivity report for date range
+ */
+export const fetchProductivityReport = async (
+  startDate: string, endDate: string,
+  filters?: { project_id?: number; billable?: string }
+): Promise<any> => {
+  try {
+    const params: Record<string, any> = { start_date: startDate, end_date: endDate };
+    if (filters?.project_id) params.project_id = filters.project_id;
+    if (filters?.billable) params.billable = filters.billable;
+    return await getWithCache<any>(
+      `${API_BASE_URL}/reports/productivity`,
+      { cacheKey: "reports/productivity", params }
+    );
+  } catch (error: any) {
+    console.error("Failed to fetch productivity report:", error);
+    throw new Error(error?.response?.data?.detail || "Failed to fetch productivity report");
+  }
+};
+
+/**
+ * Fetch tasks summary report for date range
+ */
+export const fetchTasksSummaryReport = async (
+  startDate: string, endDate: string,
+  filters?: { project_id?: number }
+): Promise<any> => {
+  try {
+    const params: Record<string, any> = { start_date: startDate, end_date: endDate };
+    if (filters?.project_id) params.project_id = filters.project_id;
+    return await getWithCache<any>(
+      `${API_BASE_URL}/reports/tasks-summary`,
+      { cacheKey: "reports/tasks-summary", params }
+    );
+  } catch (error: any) {
+    console.error("Failed to fetch tasks summary:", error);
+    throw new Error(error?.response?.data?.detail || "Failed to fetch tasks summary");
   }
 };
 

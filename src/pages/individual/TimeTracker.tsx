@@ -864,9 +864,6 @@ const TimeTracker: React.FC = () => {
 
       {/* Entries List */}
       {mode === "list" && (
-        isInitialLoading ? (
-          <SkeletonTable rows={5} />
-        ) : (
           <>
           {/* Search & Filters */}
           <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6 flex gap-4 flex-wrap items-center">
@@ -910,6 +907,9 @@ const TimeTracker: React.FC = () => {
             </div>
           </div>
 
+          {isInitialLoading ? (
+            <SkeletonTable rows={5} />
+          ) : (
           <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
             {filteredEntries.length === 0 ? (
               <div className="p-8 text-center text-slate-500">
@@ -1081,8 +1081,8 @@ const TimeTracker: React.FC = () => {
               </>
             )}
           </div>
+          )}
           </>
-        )
       )}
 
       {/* Edit Modal - UPDATED with rounded corners */}

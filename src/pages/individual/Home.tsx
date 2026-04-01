@@ -47,6 +47,7 @@ interface DateRangeTrend {
   duty_completed: boolean;
   work_hours: number;
   is_active?: boolean;
+  is_weekend?: boolean;
 }
 
 interface QuickStats {
@@ -63,7 +64,8 @@ const CustomizedDot = (props: any) => {
 
   // Determine dot color based on state
   let fillColor = "#f97316"; // Orange for normal
-  if (payload.is_absent) fillColor = "#ef4444"; // Red for absent
+  if (payload.is_weekend) fillColor = "#94a3b8"; // Gray for weekend
+  else if (payload.is_absent) fillColor = "#ef4444"; // Red for absent
   else if (payload.is_active) fillColor = "#3b82f6"; // Blue for active
 
   return (
@@ -414,14 +416,6 @@ const Home: React.FC = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
   // ── button labels & disabled states ───────────────────────────────────────
   const checkInDisabled = hasCheckedInToday || loading;
   const checkOutDisabled = !hasCheckedInToday || hasCheckedOutToday || loading;
@@ -432,12 +426,12 @@ const Home: React.FC = () => {
       : loading ? "Processing…"
         : "Check Out";
 
-  // ── Prepare chart data - use 0 for absent days to keep continuity ──
+  // ── Prepare chart data - weekends are not absent, just off days ──
   const chartData = fifteenDayTrend.map((d) => ({
     date: d.date,
-    // Use actual delay for present days, 0 for absent days (to maintain line continuity)
     checkin_delay_minutes: d.checkin_delay_minutes !== null ? d.checkin_delay_minutes : 0,
-    is_absent: d.checkin_delay_minutes === null,
+    is_absent: d.checkin_delay_minutes === null && !d.is_weekend,
+    is_weekend: d.is_weekend || false,
     is_active: d.is_active || false,
   }));
 
@@ -714,6 +708,7 @@ const Home: React.FC = () => {
               />
               <Tooltip
                 formatter={(value: any, _: string, props: any) => {
+                  if (props.payload.is_weekend) return "Weekend";
                   if (props.payload.is_absent) return "Absent";
                   if (props.payload.is_active) return `${formatMinutesToHoursMinutes(value)} late (Active)`;
                   if (value === 0) return "On time";

@@ -36,9 +36,11 @@ interface KanbanBoardProps {
     initialColumns: ColumnType[];
     initialTasks: Task[];
     onTaskClick?: (task: Task) => void;
-    /** When flipped to true, opens the Add Column form; resets via onAddColumnConsumed */
     openAddColumn?: boolean;
     onAddColumnConsumed?: () => void;
+    selectedTaskIds?: Set<number>;
+    onSelectTask?: (taskId: number, selected: boolean) => void;
+    selectionMode?: boolean;
 }
 
 type DragType = 'column' | 'task' | null;
@@ -50,6 +52,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     onTaskClick,
     openAddColumn,
     onAddColumnConsumed,
+    selectedTaskIds,
+    onSelectTask,
+    selectionMode,
 }) => {
     const [columns, setColumns] = useState<ColumnType[]>(initialColumns);
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -312,6 +317,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                 onColumnUpdated={handleColumnUpdated}
                                 onTaskCreated={handleTaskCreated}
                                 onTaskDeleted={handleTaskDeleted}
+                                isSelected={selectedTaskIds ? (id: number) => selectedTaskIds.has(id) : undefined}
+                                onSelectTask={onSelectTask}
+                                selectionMode={selectionMode}
                             />
                         ))}
                     </SortableContext>

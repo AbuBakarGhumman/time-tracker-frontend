@@ -211,31 +211,15 @@ const Projects: React.FC = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
   return (
     <div className="p-1">
       {/* Tabs */}
-      <div className="flex gap-3 mb-6 flex-wrap items-center">
-        {(["all", "owned", "shared"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => { setOwnershipFilter(f); setCurrentPage(1); }}
-            className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 text-sm ${
-              ownershipFilter === f
-                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
-            }`}
-          >
-            {f === "all" ? "All Projects" : f === "owned" ? "My Projects" : "Shared With Me"}
-          </button>
-        ))}
+      <div className="flex gap-4 mb-6 flex-wrap">
+        <button
+          className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+        >
+          Projects
+        </button>
         <div className="flex-1" />
         <button
           onClick={() => {
@@ -243,15 +227,15 @@ const Projects: React.FC = () => {
             setFormData({ name: "", description: "", color: "#3b82f6" });
             setShowCreateModal(true);
           }}
-          className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 text-sm bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+          className="px-6 py-2 rounded-lg font-semibold transition-all duration-200 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
         >
           + New Project
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6">
-        <div className="relative">
+      {/* Search & Filters */}
+      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6 flex gap-4 flex-wrap items-center">
+        <div className="relative flex-1 min-w-[200px]">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -262,6 +246,21 @@ const Projects: React.FC = () => {
             placeholder="Search by project name or description..."
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />
+        </div>
+        <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+          {(["all", "owned", "shared"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => { setOwnershipFilter(f); setCurrentPage(1); }}
+              className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${
+                ownershipFilter === f
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {f === "all" ? "All Projects" : f === "owned" ? "My Projects" : "Shared With Me"}
+            </button>
+          ))}
         </div>
       </div>
 

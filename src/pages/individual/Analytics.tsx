@@ -29,7 +29,7 @@ type ViewType = "daily" | "weekly" | "monthly";
 
 const Analytics: React.FC = () => {
   // ── STATE ────────────────────────────────────────────────────────────────
-  const [viewType, setViewType] = useState<ViewType>("weekly");
+  const [viewType, setViewType] = useState<ViewType>("daily");
   const [loading, setLoading] = useState(false);
 
   // Data

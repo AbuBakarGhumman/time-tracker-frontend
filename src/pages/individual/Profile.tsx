@@ -14,16 +14,10 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
     job_title: "",
     department: "",
-  });
-  const [passwordData, setPasswordData] = useState({
-    current_password: "",
-    new_password: "",
-    confirm_password: "",
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // Local preview only used when user picks a new file before saving
@@ -101,11 +95,6 @@ const Profile: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswordData((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
@@ -140,97 +129,11 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (passwordData.new_password !== passwordData.confirm_password) {
-      alert("New password and confirm password do not match");
-      return;
-    }
-
-    if (passwordData.new_password.length < 8) {
-      alert("Password must be at least 8 characters long");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await axios.post(`${API_BASE_URL}/users/change-password`, {
-        current_password: passwordData.current_password,
-        new_password: passwordData.new_password,
-        confirm_password: passwordData.confirm_password,
-      });
-
-      setPasswordData({ current_password: "", new_password: "", confirm_password: "" });
-      setShowPasswordModal(false);
-      alert("Password changed successfully!");
-    } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to change password");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // The avatar shown on the main page — always built from user.profile_pic_url
   const avatarSrc = getProfileImageUrl(user?.profile_pic_url);
 
   // The avatar shown inside the edit modal — uses local preview if user picked a new file
   const modalAvatarSrc = localPreview ?? getProfileImageUrl(user?.profile_pic_url);
-
-  if (!user || isInitialLoading) {
-    return (
-      <div className="p-1">
-        <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl px-6 py-4 mb-6 text-white shadow-xl">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/20 rounded-full animate-pulse" />
-              <div>
-                <div className="h-6 bg-white/20 rounded w-32 mb-2 animate-pulse" />
-                <div className="h-4 bg-white/20 rounded w-64 animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 animate-pulse">
-            <div className="text-center">
-              <div className="w-32 h-32 rounded-full bg-slate-200 mx-auto mb-6" />
-              <div className="h-6 bg-slate-200 rounded w-3/4 mx-auto mb-2" />
-              <div className="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2" />
-              <div className="h-3 bg-slate-200 rounded w-1/3 mx-auto mb-2" />
-              <div className="h-3 bg-slate-200 rounded w-1/2 mx-auto mt-4 mb-6" />
-              <div className="w-full h-10 bg-slate-200 rounded-lg" />
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 animate-pulse">
-              <div className="h-6 bg-slate-200 rounded w-1/3 mb-6 pb-4 border-b border-slate-100" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i}>
-                    <div className="h-3 bg-slate-200 rounded w-2/3 mb-2" />
-                    <div className="h-4 bg-slate-200 rounded w-3/4" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 animate-pulse">
-              <div className="h-6 bg-slate-200 rounded w-1/3 mb-6 pb-4 border-b border-slate-100" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i}>
-                    <div className="h-3 bg-slate-200 rounded w-2/3 mb-2" />
-                    <div className="h-4 bg-slate-200 rounded w-3/4" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-1">
@@ -250,6 +153,35 @@ const Profile: React.FC = () => {
         </div>
       </div>
 
+      {isInitialLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 animate-pulse">
+            <div className="text-center">
+              <div className="w-32 h-32 rounded-full bg-slate-200 mx-auto mb-6" />
+              <div className="h-6 bg-slate-200 rounded w-3/4 mx-auto mb-2" />
+              <div className="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2" />
+              <div className="h-3 bg-slate-200 rounded w-1/3 mx-auto mb-2" />
+              <div className="h-3 bg-slate-200 rounded w-1/2 mx-auto mt-4 mb-6" />
+              <div className="w-full h-10 bg-slate-200 rounded-lg" />
+            </div>
+          </div>
+          <div className="lg:col-span-2 space-y-6">
+            {[1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-md border border-slate-200 p-6 animate-pulse">
+                <div className="h-6 bg-slate-200 rounded w-1/3 mb-6 pb-4 border-b border-slate-100" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j}>
+                      <div className="h-3 bg-slate-200 rounded w-2/3 mb-2" />
+                      <div className="h-4 bg-slate-200 rounded w-3/4" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Card */}
         <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
@@ -274,12 +206,6 @@ const Profile: React.FC = () => {
               className="w-full mt-6 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200"
             >
               Edit Profile
-            </button>
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              className="w-full mt-3 px-6 py-2 bg-white text-slate-700 font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 transition-all duration-200"
-            >
-              Change Password
             </button>
           </div>
         </div>
@@ -327,6 +253,7 @@ const Profile: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Edit Profile Modal */}
       {showEditModal && (
@@ -443,89 +370,6 @@ const Profile: React.FC = () => {
         </div>
       )}
 
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-              <h3 className="text-xl font-bold">Change Password</h3>
-              <button
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordData({ current_password: "", new_password: "", confirm_password: "" });
-                }}
-                className="text-white hover:text-slate-200 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Current Password</label>
-                  <input
-                    type="password"
-                    name="current_password"
-                    value={passwordData.current_password}
-                    onChange={handlePasswordChange}
-                    placeholder="Enter your current password"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">New Password</label>
-                  <input
-                    type="password"
-                    name="new_password"
-                    value={passwordData.new_password}
-                    onChange={handlePasswordChange}
-                    placeholder="Enter new password (min 8 characters)"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    name="confirm_password"
-                    value={passwordData.confirm_password}
-                    onChange={handlePasswordChange}
-                    placeholder="Confirm new password"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                  {passwordData.new_password && passwordData.confirm_password && passwordData.new_password !== passwordData.confirm_password && (
-                    <p className="text-sm text-red-600 mt-1">Passwords do not match</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-shrink-0 bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordData({ current_password: "", new_password: "", confirm_password: "" });
-                }}
-                className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleChangePassword}
-                disabled={loading}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
-              >
-                {loading ? "Updating..." : "Change Password"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

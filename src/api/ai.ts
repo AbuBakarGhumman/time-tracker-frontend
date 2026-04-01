@@ -217,3 +217,7 @@ export const fetchAIConversation = async (id: number): Promise<AIConversationDet
 export const deleteAIConversation = async (id: number): Promise<void> => {
   await axios.delete(`${API_BASE_URL}/ai/conversations/${id}`);
 };
+
+export const renameAIConversation = async (id: number, title: string): Promise<void> => {
+  await axios.patch(`${API_BASE_URL}/ai/conversations/${id}/title`, { title });
+};

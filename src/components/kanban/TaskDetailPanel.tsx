@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { Task, BoardColumn, TaskActivity, Assignee, TaskNote } from '../../api/boards';
-import { updateTask, deleteTask, fetchTaskActivity, fetchProjectAssignees, fetchTaskNotes, createTaskNote, deleteTaskNote } from '../../api/boards';
+import type { Task, BoardColumn, TaskActivity, Assignee, TaskNote, Label } from '../../api/boards';
+import { updateTask, deleteTask, fetchTaskActivity, fetchProjectAssignees, fetchTaskNotes, createTaskNote, deleteTaskNote, archiveTask, unarchiveTask, fetchSubtasks, createSubtask, toggleSubtask, fetchTaskTimeEntries, uploadCoverImage, removeCoverImage } from '../../api/boards';
 import { API_BASE_URL } from '../../api/config';
-import { formatDate, formatDateOnly } from '../../utils/dateUtils';
+import { formatDate, formatDateOnly, formatHoursAsHoursMinutes } from '../../utils/dateUtils';
+import { AttachmentSection } from './AttachmentSection';
+import { DependencySection } from './DependencySection';
+import { LabelManager } from './LabelManager';
 
 const getAvatarUrl = (url: string | null | undefined): string | undefined => {
     if (!url) return undefined;
@@ -20,6 +23,9 @@ interface TaskDetailPanelProps {
     onClose: () => void;
     onUpdated: (task: Task) => void;
     onDeleted: (taskId: number) => void;
+    allTasks?: Task[];
+    allLabels?: import('../../api/boards').Label[];
+    onLabelsChanged?: (labels: import('../../api/boards').Label[]) => void;
 }
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
@@ -112,6 +118,9 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
     onClose,
     onUpdated,
     onDeleted,
+    allTasks = [],
+    allLabels = [],
+    onLabelsChanged,
 }) => {
     const [title, setTitle] = useState(task.title);
     const [description, setDescription] = useState(task.description ?? '');
@@ -137,6 +146,15 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
     const [noteMentionStartPos, setNoteMentionStartPos] = useState(0);
     const noteInputRef = useRef<HTMLTextAreaElement>(null);
     const noteMentionRef = useRef<HTMLDivElement>(null);
+
+    // New feature state
+    const [storyPoints, setStoryPoints] = useState<number | null>(task.story_points ?? null);
+    const [subtasks, setSubtasks] = useState<Task[]>([]);
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+    const [showLabelPicker, setShowLabelPicker] = useState(false);
+    const [taskLabels, setTaskLabels] = useState<Label[]>(task.labels || []);
+    const [timeData, setTimeData] = useState<{ total_hours: number } | null>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
 
     const noteMentionResults = noteMentionQuery !== null
         ? assignees.filter((a) => a.full_name.toLowerCase().includes(noteMentionQuery.toLowerCase())).slice(0, 6)
@@ -180,6 +198,22 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
             .catch(() => setNotes([]))
             .finally(() => setNotesLoading(false));
     }, [task.id, projectId]);
+
+    // Load subtasks
+    useEffect(() => {
+        fetchSubtasks(projectId, task.id).then(setSubtasks).catch(() => setSubtasks([]));
+    }, [task.id, projectId]);
+
+    // Load time data
+    useEffect(() => {
+        fetchTaskTimeEntries(projectId, task.id).then(setTimeData).catch(() => {});
+    }, [task.id, projectId]);
+
+    // Sync new fields from task prop
+    useEffect(() => {
+        setStoryPoints(task.story_points ?? null);
+        setTaskLabels(task.labels || []);
+    }, [task]);
 
     // Close assignee picker on outside click
     useEffect(() => {
@@ -489,8 +523,71 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                             )}
                         </div>
 
+                        {/* Subtasks / Checklist */}
+                        <div className="mb-6">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                    Subtasks {subtasks.length > 0 && `(${subtasks.filter(s => s.is_completed).length}/${subtasks.length})`}
+                                </p>
+                            </div>
+                            {subtasks.length > 0 && (
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden">
+                                    <div className="h-full bg-green-500 rounded-full transition-all" style={{
+                                        width: `${subtasks.length > 0 ? (subtasks.filter(s => s.is_completed).length / subtasks.length) * 100 : 0}%`
+                                    }} />
+                                </div>
+                            )}
+                            <div className="space-y-1 mb-2">
+                                {subtasks.map(s => (
+                                    <div key={s.id} className="flex items-center gap-2 py-1 group">
+                                        <button onClick={async () => {
+                                            try {
+                                                const updated = await toggleSubtask(projectId, task.id, s.id);
+                                                setSubtasks(prev => prev.map(st => st.id === s.id ? updated : st));
+                                            } catch {}
+                                        }}
+                                            className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition ${
+                                                s.is_completed ? 'bg-green-500 border-green-500' : 'border-slate-300 hover:border-green-400'
+                                            }`}>
+                                            {s.is_completed && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                        </button>
+                                        <span className={`text-sm flex-1 ${s.is_completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>{s.title}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <input value={newSubtaskTitle} onChange={e => setNewSubtaskTitle(e.target.value)}
+                                    placeholder="Add subtask..."
+                                    onKeyDown={async e => {
+                                        if (e.key === 'Enter' && newSubtaskTitle.trim()) {
+                                            try {
+                                                const sub = await createSubtask(projectId, task.id, newSubtaskTitle.trim());
+                                                setSubtasks(prev => [...prev, sub]);
+                                                setNewSubtaskTitle('');
+                                            } catch {}
+                                        }
+                                    }}
+                                    className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-blue-400" />
+                                <button onClick={async () => {
+                                    if (!newSubtaskTitle.trim()) return;
+                                    try {
+                                        const sub = await createSubtask(projectId, task.id, newSubtaskTitle.trim());
+                                        setSubtasks(prev => [...prev, sub]);
+                                        setNewSubtaskTitle('');
+                                    } catch {}
+                                }}
+                                    className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition">Add</button>
+                            </div>
+                        </div>
+
+                        {/* Attachments */}
+                        <AttachmentSection projectId={projectId} taskId={task.id} />
+
+                        {/* Dependencies */}
+                        <DependencySection projectId={projectId} taskId={task.id} allTasks={allTasks} />
+
                         {/* Notes */}
-                        <div>
+                        <div className="mt-6">
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Notes</p>
 
                             {/* Notes list */}
@@ -801,6 +898,96 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                             </div>
                         )}
 
+                        {/* Story Points */}
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Story Points</p>
+                            <div className="flex gap-1">
+                                {[1, 2, 3, 5, 8, 13].map(sp => (
+                                    <button key={sp} onClick={async () => {
+                                        setStoryPoints(sp);
+                                        const updated = await updateTask(projectId, task.id, { story_points: sp });
+                                        onUpdated(updated);
+                                    }}
+                                        className={`w-8 h-8 text-xs font-bold rounded-lg border transition ${
+                                            storyPoints === sp ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-purple-400'
+                                        }`}>
+                                        {sp}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Labels */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Labels</p>
+                                <button onClick={() => setShowLabelPicker(true)} className="text-[10px] text-blue-600 font-semibold">Edit</button>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {taskLabels.length === 0 ? (
+                                    <span className="text-xs text-slate-400">None</span>
+                                ) : taskLabels.map(l => (
+                                    <span key={l.id} className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: l.color + '20', color: l.color }}>{l.name}</span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Time Tracked */}
+                        {timeData && timeData.total_hours > 0 && (
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Time Tracked</p>
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    <span className="text-sm font-semibold text-slate-700">{formatHoursAsHoursMinutes(timeData.total_hours)}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Cover Image */}
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Cover Image</p>
+                            {task.cover_image_url ? (
+                                <div className="relative group">
+                                    <img src={`${API_BASE_URL.replace('/v1', '')}${task.cover_image_url}`} alt="" className="w-full h-20 object-cover rounded-lg" />
+                                    <button onClick={async () => {
+                                        const updated = await removeCoverImage(projectId, task.id);
+                                        onUpdated(updated);
+                                    }}
+                                        className="absolute top-1 right-1 bg-white/90 text-red-500 p-1 rounded opacity-0 group-hover:opacity-100 transition">
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        try { const updated = await uploadCoverImage(projectId, task.id, file); onUpdated(updated); } catch {}
+                                    }} />
+                                    <button onClick={() => coverInputRef.current?.click()}
+                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium">+ Set cover</button>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Archive */}
+                        <div>
+                            <button onClick={async () => {
+                                if (task.is_archived) {
+                                    const updated = await unarchiveTask(projectId, task.id);
+                                    onUpdated(updated);
+                                } else {
+                                    await archiveTask(projectId, task.id);
+                                    onDeleted(task.id);
+                                }
+                            }}
+                                className={`w-full text-xs font-semibold py-2 rounded-lg border transition ${
+                                    task.is_archived ? 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100' : 'text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100'
+                                }`}>
+                                {task.is_archived ? 'Unarchive' : 'Archive Task'}
+                            </button>
+                        </div>
+
                         {/* Created */}
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Created</p>
@@ -818,6 +1005,19 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                 </div>
                 </div>
             </aside>
+
+            {/* Label Picker Modal */}
+            {showLabelPicker && (
+                <LabelManager
+                    projectId={projectId}
+                    labels={allLabels}
+                    taskId={task.id}
+                    taskLabels={taskLabels}
+                    onLabelsChanged={(labels) => onLabelsChanged?.(labels)}
+                    onTaskLabelsChanged={(labels) => setTaskLabels(labels)}
+                    onClose={() => setShowLabelPicker(false)}
+                />
+            )}
         </>
     );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAIAssistant } from "../../context/AIAssistantContext";
 import type { ChatMessage } from "../../context/AIAssistantContext";
-import { uploadAIDocument, streamAIMessage, fetchAIConversation, deleteAIConversation } from "../../api/ai";
+import { uploadAIDocument, streamAIMessage, fetchAIConversation, deleteAIConversation, renameAIConversation } from "../../api/ai";
 import type { AIActionResult } from "../../api/ai";
 import AIChatMessage from "./AIChatMessage";
 import { invalidateBoardCache } from "../../api/boards";
@@ -200,6 +200,26 @@ const AIAssistantPanel: React.FC = () => {
     } catch {
       // silent
     }
+  };
+
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  const handleStartRename = (convId: number, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingId(convId);
+    setRenameValue(currentTitle);
+  };
+
+  const handleRename = async (convId: number) => {
+    const title = renameValue.trim();
+    if (!title) { setRenamingId(null); return; }
+    try {
+      await renameAIConversation(convId, title);
+      setConversations((prev) => prev.map((c) => c.id === convId ? { ...c, last_message: title } : c));
+      CacheManager.clear("ai_conversations");
+    } catch {}
+    setRenamingId(null);
   };
 
   const handleDeleteConversation = async (convId: number, e: React.MouseEvent) => {
@@ -505,7 +525,11 @@ const AIAssistantPanel: React.FC = () => {
           </div>
           <div className="min-w-0">
             <h3 className="text-white font-semibold text-sm leading-tight">AI Assistant</h3>
-            {projectContext && <p className="text-white/60 text-[11px] truncate leading-tight">{projectContext.name}</p>}
+            {conversationId && conversations.find(c => c.id === conversationId)?.last_message ? (
+              <p className="text-white/60 text-[11px] truncate leading-tight">{conversations.find(c => c.id === conversationId)!.last_message}</p>
+            ) : projectContext ? (
+              <p className="text-white/60 text-[11px] truncate leading-tight">{projectContext.name}</p>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
@@ -565,9 +589,24 @@ const AIAssistantPanel: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                       </svg>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate leading-tight">
-                          {conv.last_message || "New conversation"}
-                        </p>
+                        {renamingId === conv.id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleRename(conv.id);
+                              if (e.key === "Escape") setRenamingId(null);
+                            }}
+                            onBlur={() => handleRename(conv.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-violet-400 rounded px-1.5 py-0.5 outline-none"
+                          />
+                        ) : (
+                          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate leading-tight">
+                            {conv.last_message || "New conversation"}
+                          </p>
+                        )}
                         <div className="flex items-center gap-1 mt-0.5">
                           {conv.project_name && (
                             <span className="text-[10px] text-violet-600 dark:text-violet-400 truncate">{conv.project_name}</span>
@@ -577,15 +616,26 @@ const AIAssistantPanel: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => handleDeleteConversation(conv.id, e)}
-                        className="flex-shrink-0 p-0.5 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                        title="Delete"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          onClick={(e) => handleStartRename(conv.id, conv.last_message || "", e)}
+                          className="p-1 rounded text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors"
+                          title="Rename"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteConversation(conv.id, e)}
+                          className="p-1 rounded text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                          title="Delete"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -597,7 +647,7 @@ const AIAssistantPanel: React.FC = () => {
         {/* Main chat area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
             {messages.length === 0 ? (
               (() => {
                 const userType = getUserType();
@@ -634,12 +684,18 @@ const AIAssistantPanel: React.FC = () => {
                   <AIChatMessage key={msg.id} message={msg} />
                 ))}
                 {isLoading && !streamingMsgIdRef.current && (
-                  <div className="flex justify-start mb-3">
-                    <div className="bg-slate-100 dark:bg-slate-700 rounded-2xl rounded-bl-md px-4 py-3">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      </div>
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">AI Assistant</span>
+                    </div>
+                    <div className="pl-9">
+                      <div className="flex gap-1.5">
+                        <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
                     </div>
                   </div>

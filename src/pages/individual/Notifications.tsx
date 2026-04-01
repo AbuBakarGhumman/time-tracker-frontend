@@ -186,8 +186,6 @@ const Notifications: React.FC = () => {
     }
   };
 
-  if (loading) return <NotificationSkeleton />;
-
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const displayed = filter === "unread" ? notifications.filter((n) => !n.is_read) : notifications;
 
@@ -225,6 +223,26 @@ const Notifications: React.FC = () => {
       </div>
 
       {/* ── Main card ─────────────────────────────────────────────────────── */}
+      {loading ? (
+        <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+            <div className="h-5 bg-slate-200 rounded w-40 animate-pulse" />
+            <div className="h-8 bg-slate-200 rounded-lg w-44 animate-pulse" />
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg animate-pulse">
+                <div className="w-9 h-9 bg-slate-200 rounded-full flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-slate-200 rounded w-1/2 mb-3" />
+                  <div className="h-3 bg-slate-200 rounded w-1/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
       <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
         {/* Card header with filter toggle */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 flex-wrap gap-3">
@@ -430,6 +448,7 @@ const Notifications: React.FC = () => {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };
