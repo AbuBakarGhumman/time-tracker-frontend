@@ -98,7 +98,7 @@ const formatMinutesToHoursMinutes = (minutes: number): string => {
 };
 
 const Home: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<CheckInStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);

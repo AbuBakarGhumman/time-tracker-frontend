@@ -52,7 +52,7 @@ export const BoardActivityFeed: React.FC<Props> = ({ projectId, onClose }) => {
                     <div className="relative">
                         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-100" />
                         {activities.map(a => {
-                            const { icon, color } = getIcon(a.action);
+                            const { color } = getIcon(a.action);
                             return (
                                 <div key={a.id} className="relative pl-10 pb-4">
                                     <div className={`absolute left-2.5 top-0.5 w-3.5 h-3.5 rounded-full bg-white border-2 ${color.replace('text-', 'border-')}`} />

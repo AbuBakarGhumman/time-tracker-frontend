@@ -31,7 +31,7 @@ const TABS: { key: SettingsTab; label: string }[] = [
 ];
 
 const Settings: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");

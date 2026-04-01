@@ -57,40 +57,6 @@ const TYPE_META: Record<string, { label: string; badge: string; icon: string; do
   },
 };
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-const NotificationSkeleton: React.FC = () => (
-  <div className="p-1">
-    {/* Header skeleton */}
-    <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl px-6 py-4 mb-6 shadow-xl">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-white/20 rounded-full animate-pulse" />
-        <div>
-          <div className="h-5 bg-white/20 rounded w-40 mb-2 animate-pulse" />
-          <div className="h-3 bg-white/20 rounded w-64 animate-pulse" />
-        </div>
-      </div>
-    </div>
-    {/* Cards skeleton */}
-    <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
-        <div className="h-5 bg-slate-200 rounded w-40 animate-pulse" />
-        <div className="h-8 bg-slate-200 rounded-lg w-44 animate-pulse" />
-      </div>
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg animate-pulse">
-            <div className="w-9 h-9 bg-slate-200 rounded-full flex-shrink-0" />
-            <div className="flex-1">
-              <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-slate-200 rounded w-1/2 mb-3" />
-              <div className="h-3 bg-slate-200 rounded w-1/4" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
 
 // ── Main component ────────────────────────────────────────────────────────────
 const Notifications: React.FC = () => {

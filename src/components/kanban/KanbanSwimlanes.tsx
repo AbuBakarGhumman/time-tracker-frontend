@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { Task, BoardColumn, Label, Assignee } from '../../api/boards';
+import type { Task, BoardColumn, Assignee } from '../../api/boards';
 import { TaskCard } from './TaskCard';
 
 interface Props {

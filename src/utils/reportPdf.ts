@@ -532,15 +532,6 @@ class ReportPdfBuilder {
     });
   }
 
-  private drawChartRow(
-    charts: Array<() => void>,
-    chartHeight: number = 55
-  ) {
-    this.checkPageBreak(chartHeight + 10);
-    charts.forEach((drawFn) => drawFn());
-    this.y += chartHeight + 10;
-  }
-
   // ── Report Builders ──────────────────────────────────────────────────────
 
   generateAttendanceReport(

@@ -20,8 +20,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   Legend,
   AreaChart,
   Area,
@@ -830,9 +828,9 @@ const Reports: React.FC = () => {
 
     const {
       total_entries, total_hours, billable_hours, non_billable_hours,
-      billable_ratio, avg_entry_duration, total_tasks_completed,
+      billable_ratio, avg_entry_duration,
       categories, peak_hours, daily_avg_hours, daily_avg_entries,
-      longest_entry_hours, shortest_entry_hours,
+      longest_entry_hours,
     } = productivityData;
 
     const categoryChartData = categories.map((c, i) => ({
