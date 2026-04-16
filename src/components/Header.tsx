@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getStoredToken, getStoredUser, logout, getUserType, getStoredEmployee } from "../api/auth";
 import { useUser } from "../context/UserContext";
 import { API_BASE_URL } from "../api/config";
@@ -11,6 +12,7 @@ interface UserProfile {
 
 const Header: React.FC = () => {
   const { user: contextUser } = useUser();
+  const { t } = useTranslation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -101,7 +103,7 @@ const Header: React.FC = () => {
             </svg>
           </div>
           <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            TimeTrack Pro
+            {t("common.appName")}
           </span>
         </Link>
 
@@ -113,7 +115,7 @@ const Header: React.FC = () => {
                 to={dashboardLink} 
                 className="text-slate-300 hover:text-white transition-colors duration-200 font-medium"
               >
-                Dashboard
+                {t("common.dashboard")}
               </Link>
               
               {/* Profile Dropdown */}
@@ -142,14 +144,14 @@ const Header: React.FC = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden z-50">
                     <div className="px-4 py-3 border-b border-slate-700">
                       <p className="text-sm font-semibold text-white">{userProfile?.full_name}</p>
-                      <p className="text-xs text-slate-400">{userType === "individual" ? "Individual" : "Company Employee"}</p>
+                      <p className="text-xs text-slate-400">{userType === "individual" ? t("common.individual") : t("common.companyEmployee")}</p>
                     </div>
                     <Link
                       to={dashboardLink}
                       className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
-                      Dashboard
+                      {t("common.dashboard")}
                     </Link>
                     <button
                       onClick={() => {
@@ -158,7 +160,7 @@ const Header: React.FC = () => {
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors border-t border-slate-700"
                     >
-                      Logout
+                      {t("common.logout")}
                     </button>
                   </div>
                 )}
@@ -170,13 +172,13 @@ const Header: React.FC = () => {
                 to="/login" 
                 className="text-slate-300 hover:text-white transition-colors duration-200 font-medium"
               >
-                Login
+                {t("common.login")}
               </Link>
-              <Link 
-                to="/register" 
+              <Link
+                to="/register"
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/50"
               >
-                Get Started
+                {t("common.register")}
               </Link>
             </>
           )}
@@ -221,7 +223,7 @@ const Header: React.FC = () => {
                       </svg>
                     )}
                   </div>
-                  Dashboard
+                  {t("common.dashboard")}
                 </Link>
                 <button
                   onClick={() => {
@@ -230,7 +232,7 @@ const Header: React.FC = () => {
                   }}
                   className="text-left text-red-400 hover:text-red-300 hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-200 font-medium border-t border-white/10 mt-2 pt-3"
                 >
-                  Logout
+                  {t("common.logout")}
                 </button>
               </>
             ) : (
@@ -240,14 +242,14 @@ const Header: React.FC = () => {
                   className="text-slate-300 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-200"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Login
+                  {t("common.login")}
                 </Link>
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/register"
                   className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg transition-all duration-200 text-center"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Get Started
+                  {t("common.register")}
                 </Link>
               </>
             )}

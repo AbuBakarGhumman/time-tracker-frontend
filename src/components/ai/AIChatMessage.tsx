@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../../context/AIAssistantContext";
@@ -52,6 +53,7 @@ const markdownComponents = {
 };
 
 const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
+  const { t } = useTranslation();
   const isUser = message.role === "user";
 
   // ── User message ──
@@ -103,7 +105,7 @@ const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">AI Assistant</span>
+        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("ai.title")}</span>
         <span className="text-[10px] text-slate-400">
           {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>

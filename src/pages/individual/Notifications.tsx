@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   fetchNotifications,
@@ -12,45 +13,45 @@ import { API_BASE_URL } from "../../api/config";
 import CacheManager from "../../utils/cacheManager";
 import AnalogClockIcon from "../../components/AnalogClockIcon";
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("notifications.justNow");
+  if (mins < 60) return t("notifications.minutesAgo", { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t("notifications.hoursAgo", { count: hrs });
   const days = Math.floor(hrs / 24);
-  if (days === 1) return "yesterday";
-  return `${days} days ago`;
+  if (days === 1) return t("notifications.daysAgo", { count: 1 });
+  return t("notifications.daysAgo", { count: days });
 }
 
-const TYPE_META: Record<string, { label: string; badge: string; icon: string; dot: string }> = {
+const TYPE_META: Record<string, { labelKey: string; badge: string; icon: string; dot: string }> = {
   project_invitation: {
-    label: "Invitation",
+    labelKey: "notifications.invitation",
     badge: "bg-blue-100 text-blue-700",
     icon: "bg-blue-100 text-blue-600",
     dot: "bg-blue-500",
   },
   info: {
-    label: "Info",
+    labelKey: "notifications.info",
     badge: "bg-green-100 text-green-700",
     icon: "bg-green-100 text-green-600",
     dot: "bg-green-500",
   },
   alert: {
-    label: "Alert",
+    labelKey: "notifications.alert",
     badge: "bg-red-100 text-red-700",
     icon: "bg-red-100 text-red-600",
     dot: "bg-red-500",
   },
   task_mention: {
-    label: "Mention",
+    labelKey: "notifications.mention",
     badge: "bg-purple-100 text-purple-700",
     icon: "bg-purple-100 text-purple-600",
     dot: "bg-purple-500",
   },
   task_assignment: {
-    label: "Assignment",
+    labelKey: "notifications.assignment",
     badge: "bg-amber-100 text-amber-700",
     icon: "bg-amber-100 text-amber-600",
     dot: "bg-amber-500",
@@ -60,6 +61,7 @@ const TYPE_META: Record<string, { label: string; badge: string; icon: string; do
 
 // ── Main component ────────────────────────────────────────────────────────────
 const Notifications: React.FC = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -164,15 +166,15 @@ const Notifications: React.FC = () => {
             <AnalogClockIcon size={50} className="flex-shrink-0" />
             <div>
               <p className="text-base font-bold text-white mb-1 flex items-center gap-2">
-                Notifications
+                {t("notifications.title")}
                 {unreadCount > 0 && (
                   <span className="bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {unreadCount} unread
+                    {unreadCount} {t("notifications.unread")}
                   </span>
                 )}
               </p>
               <p className="text-sm text-white/90">
-                Project invitations, alerts, and activity updates
+                {t("notifications.subtitle")}
               </p>
             </div>
           </div>
@@ -182,7 +184,7 @@ const Notifications: React.FC = () => {
               onClick={handleMarkAllRead}
               className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold rounded-lg transition-all"
             >
-              Mark all as read
+              {t("notifications.markAllRead")}
             </button>
           )}
         </div>
@@ -213,7 +215,7 @@ const Notifications: React.FC = () => {
         {/* Card header with filter toggle */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 flex-wrap gap-3">
           <h2 className="text-xl font-bold text-slate-900">
-            {filter === "unread" ? "Unread" : "All"} Notifications
+            {filter === "unread" ? t("notifications.unreadNotifications") : t("notifications.allNotifications")}
           </h2>
           <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
             {(["all", "unread"] as const).map((f) => (
@@ -227,8 +229,8 @@ const Notifications: React.FC = () => {
                 }`}
               >
                 {f === "all"
-                  ? `All (${notifications.length})`
-                  : `Unread${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+                  ? `${t("common.all")} (${notifications.length})`
+                  : `${t("notifications.unread")}${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
               </button>
             ))}
           </div>
@@ -244,12 +246,12 @@ const Notifications: React.FC = () => {
               </svg>
             </div>
             <p className="text-slate-600 font-semibold text-lg">
-              {filter === "unread" ? "All caught up!" : "No notifications yet"}
+              {filter === "unread" ? t("notifications.allCaughtUp") : t("notifications.noNotificationsYet")}
             </p>
             <p className="text-slate-400 text-sm mt-1">
               {filter === "unread"
-                ? "You have no unread notifications."
-                : "Notifications will appear here when you receive them."}
+                ? t("notifications.noUnreadNotifications")
+                : t("notifications.notificationsWillAppear")}
             </p>
           </div>
         ) : (
@@ -321,7 +323,7 @@ const Notifications: React.FC = () => {
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${meta.badge}`}>
-                          {meta.label}
+                          {t(meta.labelKey)}
                         </span>
                         <h3 className={`text-sm font-semibold ${n.is_read ? "text-slate-700" : "text-slate-900"}`}>
                           {n.title}
@@ -331,14 +333,14 @@ const Notifications: React.FC = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-                        <span className="text-xs text-slate-400 whitespace-nowrap">{timeAgo(n.created_at)}</span>
+                        <span className="text-xs text-slate-400 whitespace-nowrap">{timeAgo(n.created_at, t)}</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(n.id);
                           }}
                           className="p-1 text-slate-300 hover:text-red-500 rounded transition"
-                          title="Delete"
+                          title={t("common.delete")}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -362,14 +364,14 @@ const Notifications: React.FC = () => {
                           disabled={actionId === n.id}
                           className="px-5 py-1.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition disabled:opacity-50"
                         >
-                          {actionId === n.id ? "Processing…" : "Accept"}
+                          {actionId === n.id ? t("notifications.processing") : t("notifications.accept")}
                         </button>
                         <button
                           onClick={() => handleDecline(n)}
                           disabled={actionId === n.id}
                           className="px-5 py-1.5 text-sm font-semibold bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition disabled:opacity-50"
                         >
-                          Decline
+                          {t("notifications.decline")}
                         </button>
                       </div>
                     )}
@@ -390,7 +392,7 @@ const Notifications: React.FC = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                             <span>
-                              You accepted <strong>{n.data?.inviter_name}</strong>'s invitation to join <strong>"{n.data?.project_name}"</strong> as <strong>{n.data?.role}</strong>.
+                              {t("notifications.acceptedInvitation", { inviter: n.data?.inviter_name, project: n.data?.project_name, role: n.data?.role })}
                             </span>
                           </>
                         ) : n.data?.status === "declined" ? (
@@ -399,11 +401,11 @@ const Notifications: React.FC = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                             <span>
-                              You declined <strong>{n.data?.inviter_name}</strong>'s invitation to join <strong>"{n.data?.project_name}"</strong> as <strong>{n.data?.role}</strong>.
+                              {t("notifications.declinedInvitation", { inviter: n.data?.inviter_name, project: n.data?.project_name, role: n.data?.role })}
                             </span>
                           </>
                         ) : (
-                          <span>This invitation has already been actioned.</span>
+                          <span>{t("notifications.alreadyActioned")}</span>
                         )}
                       </div>
                     )}

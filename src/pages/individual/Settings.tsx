@@ -6,6 +6,8 @@ import { API_BASE_URL } from "../../api/config";
 import CacheManager from "../../utils/cacheManager";
 import type { User } from "../../api/auth";
 import { setStoredTimezone } from "../../utils/dateUtils";
+import { useTranslation } from "react-i18next";
+import { LANGUAGES } from "../../i18n/i18n";
 
 interface Settings {
   enable_notifications: boolean;
@@ -23,14 +25,15 @@ interface Settings {
 
 type SettingsTab = "general" | "notifications" | "branding" | "account";
 
-const TABS: { key: SettingsTab; label: string }[] = [
-  { key: "general", label: "General" },
-  { key: "notifications", label: "Notifications" },
-  { key: "branding", label: "Report Branding" },
-  { key: "account", label: "Account" },
-];
-
 const Settings: React.FC = () => {
+  const { t, i18n } = useTranslation();
+
+  const TABS: { key: SettingsTab; label: string }[] = [
+    { key: "general", label: t("settings.general") },
+    { key: "notifications", label: t("settings.notificationsTab") },
+    { key: "branding", label: t("settings.reportBranding") },
+    { key: "account", label: t("settings.account") },
+  ];
   const [, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -104,17 +107,17 @@ const Settings: React.FC = () => {
       // Update cache with new settings and persist timezone for all date utils
       CacheManager.set("users/settings", settings, {});
       if (settings.timezone) setStoredTimezone(settings.timezone);
-      setSaveMessage("Settings saved successfully!");
+      setSaveMessage(t("common.settingsSaved"));
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (error: any) {
-      setSaveMessage(error?.response?.data?.detail || "Failed to save settings");
+      setSaveMessage(error?.response?.data?.detail || t("settings.failedSaveSettings"));
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogoutAll = async () => {
-    const confirmed = window.confirm("Are you sure you want to logout from all devices?");
+    const confirmed = window.confirm(t("settings.confirmLogoutAll"));
     if (!confirmed) return;
 
     setLoading(true);
@@ -123,7 +126,7 @@ const Settings: React.FC = () => {
       await logout();
       navigate("/login");
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to logout from all devices");
+      alert(error?.response?.data?.detail || t("settings.failedLogoutAll"));
     } finally {
       setLoading(false);
     }
@@ -137,12 +140,12 @@ const Settings: React.FC = () => {
 
   const handleChangePassword = async () => {
     if (passwordData.new_password !== passwordData.confirm_password) {
-      setPasswordMessage("New password and confirm password do not match");
+      setPasswordMessage(t("settings.passwordMismatch"));
       return;
     }
 
     if (passwordData.new_password.length < 8) {
-      setPasswordMessage("Password must be at least 8 characters long");
+      setPasswordMessage(t("settings.passwordTooShort"));
       return;
     }
 
@@ -155,10 +158,10 @@ const Settings: React.FC = () => {
       });
 
       setPasswordData({ current_password: "", new_password: "", confirm_password: "" });
-      setPasswordMessage("Password changed successfully!");
+      setPasswordMessage(t("settings.passwordChanged"));
       setTimeout(() => setPasswordMessage(""), 3000);
     } catch (error: any) {
-      setPasswordMessage(error?.response?.data?.detail || "Failed to change password");
+      setPasswordMessage(error?.response?.data?.detail || t("settings.failedPasswordChange"));
     } finally {
       setLoading(false);
     }
@@ -175,7 +178,7 @@ const Settings: React.FC = () => {
       });
       handleSettingChange("report_brand_logo_url", res.data.profile_pic_url);
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Failed to upload logo");
+      alert(error?.response?.data?.detail || t("settings.failedUploadLogo"));
     }
   };
 
@@ -224,11 +227,11 @@ const Settings: React.FC = () => {
               {/* Display Settings */}
               <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
                 <h2 className="text-xl font-bold text-slate-900 mb-6 pb-4 border-b border-slate-200">
-                  Display Settings
+                  {t("settings.displaySettings")}
                 </h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Timezone</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.timezone")}</label>
                     <select
                       value={settings.timezone}
                       onChange={(e) => handleSettingChange("timezone", e.target.value)}
@@ -317,17 +320,40 @@ const Settings: React.FC = () => {
                       </optgroup>
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.language")}</label>
+                    <select
+                      value={i18n.language}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        i18n.changeLanguage(code);
+                        localStorage.setItem("app-language", code);
+                        const lang = LANGUAGES.find((l) => l.code === code);
+                        document.documentElement.dir = lang?.dir || "ltr";
+                        document.documentElement.lang = code;
+                      }}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.nativeName} — {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">{t("settings.languageDescription")}</p>
+                  </div>
                 </div>
               </div>
 
               {/* Working Hours */}
               <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
                 <h2 className="text-xl font-bold text-slate-900 mb-6 pb-4 border-b border-slate-200">
-                  Working Hours
+                  {t("settings.workingHours")}
                 </h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Start Time</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.startTime")}</label>
                     <input
                       type="time"
                       value={settings.working_hours_start}
@@ -336,7 +362,7 @@ const Settings: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">End Time</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.endTime")}</label>
                     <input
                       type="time"
                       value={settings.working_hours_end}
@@ -352,12 +378,12 @@ const Settings: React.FC = () => {
               {/* Time Entry */}
               <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
                 <h2 className="text-xl font-bold text-slate-900 mb-4 pb-3 border-b border-slate-200">
-                  Time Entry
+                  {t("settings.timeEntry")}
                 </h2>
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="font-semibold text-slate-900">Require Task for Time Entry</p>
-                    <p className="text-sm text-slate-600">Entries must be linked to a task</p>
+                    <p className="font-semibold text-slate-900">{t("settings.requireTask")}</p>
+                    <p className="text-sm text-slate-600">{t("settings.requireTaskDesc")}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -373,18 +399,18 @@ const Settings: React.FC = () => {
 
               {/* AI Assistant */}
               <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 pb-3 border-b border-slate-200">AI Assistant</h2>
+                <h2 className="text-xl font-bold text-slate-900 mb-4 pb-3 border-b border-slate-200">{t("settings.aiAssistant")}</h2>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Assistant Name</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.assistantName")}</label>
                   <input
                     type="text"
                     value={settings.ai_assistant_name || ""}
                     onChange={(e) => handleSettingChange("ai_assistant_name", e.target.value)}
-                    placeholder="Give your assistant a name (e.g. Jarvis, Nova, Aria)"
+                    placeholder={t("settings.assistantNamePlaceholder")}
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     maxLength={30}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Your assistant will introduce itself by this name and respond to it.</p>
+                  <p className="text-xs text-slate-500 mt-1">{t("settings.assistantNameHint")}</p>
                 </div>
               </div>
             </div>
@@ -393,7 +419,7 @@ const Settings: React.FC = () => {
             <div>
               {saveMessage && (
                 <div
-                  className={`p-4 rounded-lg mb-4 ${saveMessage.includes("successfully")
+                  className={`p-4 rounded-lg mb-4 ${saveMessage === t("common.settingsSaved")
                       ? "bg-green-50 text-green-700 border border-green-200"
                       : "bg-red-50 text-red-700 border border-red-200"
                     }`}
@@ -406,7 +432,7 @@ const Settings: React.FC = () => {
                 disabled={loading}
                 className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
               >
-                {loading ? "Saving..." : "Save Settings"}
+                {loading ? t("common.saving") : t("settings.saveSettings")}
               </button>
             </div>
           </div>
@@ -417,14 +443,14 @@ const Settings: React.FC = () => {
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
               <h2 className="text-xl font-bold text-slate-900 mb-6 pb-4 border-b border-slate-200">
-                Notification Preferences
+                {t("settings.notificationPreferences")}
               </h2>
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="font-semibold text-slate-900">Enable Notifications</p>
-                    <p className="text-sm text-slate-600">Receive push notifications</p>
+                    <p className="font-semibold text-slate-900">{t("settings.enableNotifications")}</p>
+                    <p className="text-sm text-slate-600">{t("settings.enableNotificationsDesc")}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -439,8 +465,8 @@ const Settings: React.FC = () => {
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="font-semibold text-slate-900">Daily Digest</p>
-                    <p className="text-sm text-slate-600">Receive a daily summary of your activity</p>
+                    <p className="font-semibold text-slate-900">{t("settings.dailyDigest")}</p>
+                    <p className="text-sm text-slate-600">{t("settings.dailyDigestDesc")}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -455,8 +481,8 @@ const Settings: React.FC = () => {
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="font-semibold text-slate-900">Email Alerts</p>
-                    <p className="text-sm text-slate-600">Receive important alerts via email</p>
+                    <p className="font-semibold text-slate-900">{t("settings.emailAlerts")}</p>
+                    <p className="text-sm text-slate-600">{t("settings.emailAlertsDesc")}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -475,7 +501,7 @@ const Settings: React.FC = () => {
             <div>
               {saveMessage && (
                 <div
-                  className={`p-4 rounded-lg mb-4 ${saveMessage.includes("successfully")
+                  className={`p-4 rounded-lg mb-4 ${saveMessage === t("common.settingsSaved")
                       ? "bg-green-50 text-green-700 border border-green-200"
                       : "bg-red-50 text-red-700 border border-red-200"
                     }`}
@@ -488,7 +514,7 @@ const Settings: React.FC = () => {
                 disabled={loading}
                 className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
               >
-                {loading ? "Saving..." : "Save Settings"}
+                {loading ? t("common.saving") : t("settings.saveSettings")}
               </button>
             </div>
           </div>
@@ -499,21 +525,21 @@ const Settings: React.FC = () => {
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
               <h2 className="text-xl font-bold text-slate-900 mb-6 pb-4 border-b border-slate-200">
-                Report Branding
+                {t("settings.brandingTitle")}
               </h2>
               <p className="text-sm text-slate-500 mb-6">
-                Customize how your exported PDF reports look. Your brand name and logo will appear in the report header.
+                {t("settings.brandingDescription")}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Brand Name */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Brand / Business Name</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.brandName")}</label>
                   <input
                     type="text"
                     value={settings.report_brand_name}
                     onChange={(e) => handleSettingChange("report_brand_name", e.target.value)}
-                    placeholder="e.g. John's Freelance Studio"
+                    placeholder={t("settings.brandNamePlaceholder")}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
                   />
                   <p className="text-xs text-slate-400 mt-1">Shown in the PDF report header. Leave blank to use "Time Tracker Pro".</p>
@@ -521,7 +547,7 @@ const Settings: React.FC = () => {
 
                 {/* Accent Color */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Report Accent Color</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.accentColor")}</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
@@ -541,7 +567,7 @@ const Settings: React.FC = () => {
 
                 {/* Logo Upload */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Brand Logo</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.brandLogo")}</label>
                   <div className="flex items-center gap-4">
                     {settings.report_brand_logo_url ? (
                       <div className="relative">
@@ -566,7 +592,7 @@ const Settings: React.FC = () => {
                     )}
                     <div>
                       <label className="cursor-pointer px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-lg transition-colors">
-                        Upload Logo
+                        {t("settings.uploadLogo")}
                         <input
                           type="file"
                           accept="image/*"
@@ -581,7 +607,7 @@ const Settings: React.FC = () => {
 
                 {/* Preview */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Preview</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.livePreview")}</label>
                   <div
                     className="rounded-lg p-4 text-white flex items-center justify-between"
                     style={{ background: `linear-gradient(135deg, ${settings.report_accent_color}, ${settings.report_accent_color}dd)` }}
@@ -599,7 +625,7 @@ const Settings: React.FC = () => {
                         <p className="text-xs text-white/70">Attendance Report — Jan 1, 2026 — Mar 26, 2026</p>
                       </div>
                     </div>
-                    <p className="text-xs text-white/50">Preview</p>
+                    <p className="text-xs text-white/50">{t("settings.livePreview")}</p>
                   </div>
                 </div>
               </div>
@@ -609,7 +635,7 @@ const Settings: React.FC = () => {
             <div>
               {saveMessage && (
                 <div
-                  className={`p-4 rounded-lg mb-4 ${saveMessage.includes("successfully")
+                  className={`p-4 rounded-lg mb-4 ${saveMessage === t("common.settingsSaved")
                       ? "bg-green-50 text-green-700 border border-green-200"
                       : "bg-red-50 text-red-700 border border-red-200"
                     }`}
@@ -622,7 +648,7 @@ const Settings: React.FC = () => {
                 disabled={loading}
                 className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
               >
-                {loading ? "Saving..." : "Save Settings"}
+                {loading ? t("common.saving") : t("settings.saveSettings")}
               </button>
             </div>
           </div>
@@ -634,29 +660,29 @@ const Settings: React.FC = () => {
             {/* Change Password */}
             <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
               <h2 className="text-xl font-bold text-slate-900 mb-2 pb-4 border-b border-slate-200">
-                Change Password
+                {t("settings.changePassword")}
               </h2>
-              <p className="text-sm text-slate-500 mb-4">Update your password to keep your account secure.</p>
+              <p className="text-sm text-slate-500 mb-4">{t("settings.updatePasswordDesc")}</p>
               <button
                 onClick={() => setShowPasswordModal(true)}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200"
               >
-                Change Password
+                {t("settings.changePassword")}
               </button>
             </div>
 
             {/* Logout from All Devices */}
             <div className="bg-red-50 rounded-xl shadow-md border border-red-200 p-6">
-              <h2 className="text-xl font-bold text-red-900 mb-4">Logout From All Devices</h2>
+              <h2 className="text-xl font-bold text-red-900 mb-4">{t("settings.logoutAllDevices")}</h2>
               <p className="text-red-700 mb-4">
-                This will logout you from all devices and sessions. You will need to login again.
+                {t("settings.logoutAllDesc")}
               </p>
               <button
                 onClick={handleLogoutAll}
                 disabled={loading}
                 className="w-full px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 disabled:opacity-50"
               >
-                {loading ? "Processing..." : "Logout from All Devices"}
+                {loading ? t("common.processing") : t("settings.logoutAll")}
               </button>
             </div>
           </div>
@@ -667,7 +693,7 @@ const Settings: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
               <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-                <h3 className="text-xl font-bold">Change Password</h3>
+                <h3 className="text-xl font-bold">{t("settings.changePassword")}</h3>
                 <button
                   onClick={() => {
                     setShowPasswordModal(false);
@@ -685,7 +711,7 @@ const Settings: React.FC = () => {
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Current Password</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.currentPassword")}</label>
                     <input
                       type="password"
                       name="current_password"
@@ -697,7 +723,7 @@ const Settings: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">New Password</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.newPassword")}</label>
                     <input
                       type="password"
                       name="new_password"
@@ -709,7 +735,7 @@ const Settings: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Confirm Password</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("settings.confirmNewPassword")}</label>
                     <input
                       type="password"
                       name="confirm_password"
@@ -719,13 +745,13 @@ const Settings: React.FC = () => {
                       className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     />
                     {passwordData.new_password && passwordData.confirm_password && passwordData.new_password !== passwordData.confirm_password && (
-                      <p className="text-sm text-red-600 mt-1">Passwords do not match</p>
+                      <p className="text-sm text-red-600 mt-1">{t("settings.passwordMismatch")}</p>
                     )}
                   </div>
 
                   {passwordMessage && (
                     <div
-                      className={`p-4 rounded-lg ${passwordMessage.includes("successfully")
+                      className={`p-4 rounded-lg ${passwordMessage === t("settings.passwordChanged")
                           ? "bg-green-50 text-green-700 border border-green-200"
                           : "bg-red-50 text-red-700 border border-red-200"
                         }`}
@@ -745,14 +771,14 @@ const Settings: React.FC = () => {
                   }}
                   className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleChangePassword}
                   disabled={loading || !passwordData.current_password || !passwordData.new_password || !passwordData.confirm_password}
                   className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                 >
-                  {loading ? "Updating..." : "Change Password"}
+                  {loading ? t("settings.updatingPassword") : t("settings.updatePassword")}
                 </button>
               </div>
             </div>

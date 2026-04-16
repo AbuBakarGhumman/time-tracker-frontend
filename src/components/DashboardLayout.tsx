@@ -5,8 +5,10 @@ import { useUser } from "../context/UserContext";
 import { API_BASE_URL } from "../api/config";
 import type { User } from "../api/auth";
 import { NotificationBell } from "./NotificationBell";
+import LanguageSelector from "./LanguageSelector";
 import AIAssistantButton from "./ai/AIAssistantButton";
 import { useAIAssistant } from "../context/AIAssistantContext";
+import { useTranslation } from "react-i18next";
 import axios from "../api/interceptor";
 import { setStoredTimezone } from "../utils/dateUtils";
 import CacheManager from "../utils/cacheManager";
@@ -24,6 +26,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [showGreeting, setShowGreeting] = useState(false);
   const [greetingVisible, setGreetingVisible] = useState(false);
+  const { t } = useTranslation();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -118,37 +121,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const navItems = [
     {
-      name: "Dashboard",
+      name: t("common.dashboard"),
       path: "/dashboard",
       icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
     },
     {
-      name: "Time Tracker",
+      name: t("common.timeTracker"),
       path: "/time-tracker",
       icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
     },
     {
-      name: "Reports",
+      name: t("common.reports"),
       path: "/reports",
       icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
     },
     {
-      name: "Projects",
+      name: t("common.projects"),
       path: "/projects",
       icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01m-3-5h.01m-.01 4h.01",
     },
     {
-      name: "Notifications",
+      name: t("common.notifications"),
       path: "/notifications",
       icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
     },
     {
-      name: "Profile",
+      name: t("common.profile"),
       path: "/profile",
       icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
     },
     {
-      name: "Settings",
+      name: t("common.settings"),
       path: "/settings",
       icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M12 15a3 3 0 100-6 3 3 0 000 6z",
     },
@@ -187,7 +190,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           <button
             onClick={handleHeaderMenuClick}
             className="p-0.5 hover:bg-slate-800 rounded-lg transition-colors mr-1"
-            title={collapsed ? "Expand menu" : "Collapse menu"}
+            title={collapsed ? t("common.expandMenu") : t("common.collapseMenu")}
           >
             <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -222,7 +225,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               }}
             >
               <p className="text-sm text-slate-300 leading-tight whitespace-nowrap">
-                👋&nbsp;Welcome back, <span className="font-semibold text-white">{firstName}!</span>
+                👋&nbsp;{t("common.welcomeBack", { name: firstName })}
               </p>
             </div>
           )}
@@ -233,6 +236,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               style={{ transition: "opacity 0.6s ease", opacity: greetingVisible ? 1 : 0 }}
             />
           )}
+
+          <LanguageSelector />
 
           <NotificationBell />
 
@@ -341,11 +346,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     opacity: collapsed ? 0 : 1,
                   }}
                 >
-                  Logout
+                  {t("common.logout")}
                 </span>
               </button>
 
-              {collapsed && <NavTooltip label="Logout" />}
+              {collapsed && <NavTooltip label={t("common.logout")} />}
             </div>
           </div>
         </aside>
@@ -398,7 +403,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                Logout
+                {t("common.logout")}
               </button>
             </div>
           </div>

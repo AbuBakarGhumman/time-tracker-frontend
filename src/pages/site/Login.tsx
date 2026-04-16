@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { unifiedLogin } from "../../api/auth";
 
 const Login: React.FC = () => {
@@ -13,11 +14,12 @@ const Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Check if there's a success message from registration
     if (location.state?.message) {
-      setSuccessMessage(location.state.message);
+      setSuccessMessage(t("auth.registrationSuccess"));
       // Clear message after 5 seconds
       setTimeout(() => setSuccessMessage(""), 5000);
     }
@@ -53,7 +55,7 @@ const Login: React.FC = () => {
         navigate("/platform/admin-dashboard");
       }
     } catch (err: any) {
-      setError(err.message || "Login failed. Please check your credentials and try again.");
+      setError(err.message || t("auth.loginFailedMessage"));
       setErrorType("general");
     } finally {
       setLoading(false);
@@ -73,10 +75,10 @@ const Login: React.FC = () => {
         {/* Logo/Brand */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-slate-900 mb-2">
-            Welcome Back
+            {t("auth.welcomeBack")}
           </h2>
           <p className="text-slate-600">
-            Sign in to continue to your dashboard
+            {t("auth.signInToContinue")}
           </p>
         </div>
 
@@ -97,7 +99,7 @@ const Login: React.FC = () => {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               <div className="flex-1">
-                <p className="font-semibold text-sm mb-1">Login Failed</p>
+                <p className="font-semibold text-sm mb-1">{t("auth.loginFailed")}</p>
                 <p className="text-sm leading-relaxed">{error}</p>
               </div>
             </div>
@@ -110,7 +112,7 @@ const Login: React.FC = () => {
                 htmlFor="email"
                 className="block text-sm font-semibold text-slate-700 mb-2"
               >
-                Email Address
+                {t("auth.emailAddress")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -128,7 +130,7 @@ const Login: React.FC = () => {
                     if (error) { setError(""); setErrorType(null); }
                   }}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
-                  placeholder="you@example.com"
+                  placeholder={t("auth.emailPlaceholder")}
                 />
               </div>
             </div>
@@ -139,7 +141,7 @@ const Login: React.FC = () => {
                 htmlFor="password"
                 className="block text-sm font-semibold text-slate-700 mb-2"
               >
-                Password
+                {t("auth.password")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -157,7 +159,7 @@ const Login: React.FC = () => {
                     if (error) { setError(""); setErrorType(null); }
                   }}
                   className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
-                  placeholder="Enter your password"
+                  placeholder={t("auth.passwordPlaceholder")}
                 />
                 <button
                   type="button"
@@ -188,11 +190,11 @@ const Login: React.FC = () => {
                   className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 />
                 <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">
-                  Remember me
+                  {t("auth.rememberMe")}
                 </span>
               </label>
               <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
-                Forgot password?
+                {t("auth.forgotPassword")}
               </Link>
             </div>
 
@@ -208,10 +210,10 @@ const Login: React.FC = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  {t("auth.signingIn")}
                 </span>
               ) : (
-                "Log In"
+                t("auth.logIn")
               )}
             </button>
           </form>
@@ -219,12 +221,12 @@ const Login: React.FC = () => {
          
         {/* Register Link */}
         <p className="mt-6 text-center text-slate-600">
-          Don't have an account?{" "}
+          {t("auth.noAccount")}{" "}
           <Link
             to="/register"
             className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
           >
-            Create one now
+            {t("auth.createOneNow")}
           </Link>
         </p>
       </div>

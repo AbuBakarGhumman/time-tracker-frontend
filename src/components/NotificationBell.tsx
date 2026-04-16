@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   fetchNotifications,
   markRead,
@@ -14,17 +15,18 @@ import CacheManager from "../utils/cacheManager";
 
 const MAX_DROPDOWN = 6;
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("notifications.justNow");
+  if (mins < 60) return t("notifications.minutesAgo", { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return t("notifications.hoursAgo", { count: hrs });
+  return t("notifications.daysAgo", { count: Math.floor(hrs / 24) });
 }
 
 export const NotificationBell: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -159,7 +161,7 @@ export const NotificationBell: React.FC = () => {
       <button
         onClick={handleOpen}
         className="relative p-2 rounded-lg hover:bg-slate-800 transition-colors"
-        title="Notifications"
+        title={t("notifications.title")}
       >
         <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -177,21 +179,21 @@ export const NotificationBell: React.FC = () => {
         <div className="absolute right-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-            <span className="text-sm font-bold text-white">Notifications</span>
+            <span className="text-sm font-bold text-white">{t("notifications.title")}</span>
             <div className="flex items-center gap-2">
               {unreadNotifications.length > 0 && (
                 <button
                   onClick={handleMarkAllRead}
                   className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  Mark all read
+                  {t("notifications.markAllRead")}
                 </button>
               )}
               <button
                 onClick={() => { setOpen(false); navigate("/notifications"); }}
                 className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
               >
-                View all
+                {t("notifications.viewAll")}
               </button>
             </div>
           </div>
@@ -203,7 +205,7 @@ export const NotificationBell: React.FC = () => {
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" />
               </div>
             ) : recent.length === 0 ? (
-              <div className="py-10 text-center text-slate-500 text-sm">No unread notifications</div>
+              <div className="py-10 text-center text-slate-500 text-sm">{t("notifications.noUnread")}</div>
             ) : (
               recent.map((n) => (
                 <NotificationItem
@@ -224,7 +226,7 @@ export const NotificationBell: React.FC = () => {
                 onClick={() => { setOpen(false); navigate("/notifications"); }}
                 className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
               >
-                See {unreadNotifications.length - MAX_DROPDOWN} more unread
+                {t("notifications.seeMore", { count: unreadNotifications.length - MAX_DROPDOWN })}
               </button>
             </div>
           )}
@@ -243,6 +245,7 @@ interface ItemProps {
 }
 
 const NotificationItem: React.FC<ItemProps> = ({ n, actionId, onRead, onAccept, onDecline }) => {
+  const { t } = useTranslation();
   const isPending = n.type === "project_invitation" && n.data?.status !== "accepted" && n.data?.status !== "declined";
   const isActed = n.data?.status === "accepted" || n.data?.status === "declined";
 
@@ -289,7 +292,7 @@ const NotificationItem: React.FC<ItemProps> = ({ n, actionId, onRead, onAccept, 
             {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />}
           </div>
           {n.body && <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{n.body}</p>}
-          <p className="text-[10px] text-slate-500 mt-1">{timeAgo(n.created_at)}</p>
+          <p className="text-[10px] text-slate-500 mt-1">{timeAgo(n.created_at, t)}</p>
 
           {/* Invitation action buttons */}
           {isPending && !isActed && (
@@ -299,20 +302,20 @@ const NotificationItem: React.FC<ItemProps> = ({ n, actionId, onRead, onAccept, 
                 disabled={actionId === n.id}
                 className="flex-1 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition disabled:opacity-50"
               >
-                {actionId === n.id ? "…" : "Accept"}
+                {actionId === n.id ? t("notifications.processing") : t("notifications.accept")}
               </button>
               <button
                 onClick={onDecline}
                 disabled={actionId === n.id}
                 className="flex-1 py-1 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition disabled:opacity-50"
               >
-                Decline
+                {t("notifications.decline")}
               </button>
             </div>
           )}
           {isActed && (
             <p className={`text-[10px] mt-1.5 font-semibold ${n.data?.status === "accepted" ? "text-green-400" : "text-slate-500"}`}>
-              {n.data?.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
+              {n.data?.status === "accepted" ? t("notifications.accepted") : t("notifications.declined")}
             </p>
           )}
         </div>

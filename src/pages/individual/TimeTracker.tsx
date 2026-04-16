@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   fetchTimeEntries,
   fetchActiveEntry as fetchActiveEntryFromAPI,
@@ -59,6 +60,7 @@ interface ActiveEntry {
 }
 
 const TimeTracker: React.FC = () => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"list" | "manual" | "automatic">("list");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -298,7 +300,7 @@ const TimeTracker: React.FC = () => {
       setMode("list");
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.message || "Failed to create entry");
+      alert(error?.message || t("timeTracker.failedToCreate"));
     } finally {
       setLoading(false);
     }
@@ -343,7 +345,7 @@ const TimeTracker: React.FC = () => {
       setMode("list");
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.message || "Failed to start timer");
+      alert(error?.message || t("timeTracker.failedToStart"));
     } finally {
       setLoading(false);
     }
@@ -362,7 +364,7 @@ const TimeTracker: React.FC = () => {
       await fetchEntries();
       await fetchActiveEntry();
     } catch (error: any) {
-      alert(error?.message || "Failed to stop entry");
+      alert(error?.message || t("timeTracker.failedToStop"));
     } finally {
       setLoading(false);
     }
@@ -384,7 +386,7 @@ const TimeTracker: React.FC = () => {
   };
 
   const handleDeleteEntry = async (entryId: number) => {
-    const confirmed = window.confirm("Are you sure you want to delete this entry?");
+    const confirmed = window.confirm(t("timeTracker.confirmDelete"));
     if (!confirmed) return;
     
     setLoading(true);
@@ -392,7 +394,7 @@ const TimeTracker: React.FC = () => {
       await deleteTimeEntry(entryId);
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.message || "Failed to delete entry");
+      alert(error?.message || t("timeTracker.failedToDelete"));
     } finally {
       setLoading(false);
     }
@@ -400,7 +402,7 @@ const TimeTracker: React.FC = () => {
 
   const handleContinueEntry = async (entry: TimeEntry) => {
     if (activeEntry) {
-      alert("Stop the current active timer before starting a new one.");
+      alert(t("timeTracker.stopActiveFirst"));
       return;
     }
     setLoading(true);
@@ -426,7 +428,7 @@ const TimeTracker: React.FC = () => {
       setMode("list");
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.message || "Failed to start timer");
+      alert(error?.message || t("timeTracker.failedToStart"));
     } finally {
       setLoading(false);
     }
@@ -467,7 +469,7 @@ const TimeTracker: React.FC = () => {
       setSelectedEditEntry(null);
       await fetchEntries();
     } catch (error: any) {
-      alert(error?.message || "Failed to update entry");
+      alert(error?.message || t("timeTracker.failedToUpdate"));
     } finally {
       setLoading(false);
     }
@@ -527,7 +529,7 @@ const TimeTracker: React.FC = () => {
               : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
           }`}
         >
-          My Entries
+          {t("timeTracker.myEntries")}
         </button>
         <button
           onClick={() => setMode("manual")}
@@ -537,7 +539,7 @@ const TimeTracker: React.FC = () => {
               : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
           }`}
         >
-          Manual Entry
+          {t("timeTracker.manualEntry")}
         </button>
         <button
           onClick={() => setMode("automatic")}
@@ -547,7 +549,7 @@ const TimeTracker: React.FC = () => {
               : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
           }`}
         >
-          Live Entry
+          {t("timeTracker.liveEntry")}
         </button>
       </div>
 
@@ -581,7 +583,7 @@ const TimeTracker: React.FC = () => {
                 disabled:cursor-not-allowed
               `}
             >
-              {loading ? "Stopping…" : "Stop Timer"}
+              {loading ? t("timeTracker.stopping") : t("timeTracker.stopTimer")}
             </button>
           </div>
         </div>
@@ -590,14 +592,14 @@ const TimeTracker: React.FC = () => {
       {/* Manual Entry Form */}
       {mode === "manual" && (
         <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4 text-slate-900">Create Manual Entry</h2>
+          <h2 className="text-xl font-bold mb-4 text-slate-900">{t("timeTracker.createManualEntry")}</h2>
           <form onSubmit={handleCreateManual} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Entry Name <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.entryName")} <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  placeholder="e.g. Fix login bug"
+                  placeholder={t("timeTracker.entryNamePlaceholder")}
                   value={manualForm.task_name}
                   onChange={(e) => setManualForm({ ...manualForm, task_name: e.target.value })}
                   required
@@ -605,7 +607,7 @@ const TimeTracker: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Project</label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.project")}</label>
                 <select
                   value={manualForm.project_id}
                   onChange={(e) => {
@@ -616,7 +618,7 @@ const TimeTracker: React.FC = () => {
                   }}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value="others">Others (General Work)</option>
+                  <option value="others">{t("timeTracker.othersGeneralWork")}</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id.toString()}>
                       {project.name}
@@ -629,13 +631,13 @@ const TimeTracker: React.FC = () => {
             {/* Task selector + Move To — shown together when a real project is selected */}
             {manualForm.project_id && manualForm.project_id !== "others" && (
               loadingTasks ? (
-                <p className="text-sm text-slate-500 px-1">Loading tasks...</p>
+                <p className="text-sm text-slate-500 px-1">{t("timeTracker.loadingTasks")}</p>
               ) : manualProjectTasks.length === 0 ? (
-                <p className="text-sm text-amber-600 px-1">No incomplete tasks in this project. You can still log time without a task.</p>
+                <p className="text-sm text-amber-600 px-1">{t("timeTracker.noIncompleteTasks")}</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-1.5 text-slate-700">Task <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.task")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
                     <select
                       value={manualForm.task_id}
                       onChange={(e) => {
@@ -649,7 +651,7 @@ const TimeTracker: React.FC = () => {
                       }}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                     >
-                      <option value="">— Select Task —</option>
+                      <option value="">{t("timeTracker.selectTask")}</option>
                       {manualProjectTasks.map((task) => (
                         <option key={task.id} value={task.id.toString()}>
                           {task.title}{task.current_column_name ? ` (${task.current_column_name})` : ""}
@@ -658,14 +660,14 @@ const TimeTracker: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-1.5 text-slate-700">Move Task To <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.moveTaskTo")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
                     <select
                       value={manualForm.task_column_type}
                       onChange={(e) => setManualForm({ ...manualForm, task_column_type: e.target.value })}
                       disabled={!manualForm.task_id}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <option value="">— Keep Current Status —</option>
+                      <option value="">{t("timeTracker.keepCurrentStatus")}</option>
                       {manualProjectColumns.map((col) => (
                         <option key={col.id} value={col.column_type}>
                           {col.name}
@@ -679,31 +681,31 @@ const TimeTracker: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Category <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.category")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
                 <input
                   type="text"
-                  placeholder="e.g. Development, Meeting, Support"
+                  placeholder={t("timeTracker.categoryPlaceholder")}
                   value={manualForm.category}
                   onChange={(e) => setManualForm({ ...manualForm, category: e.target.value })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Billing</label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.billing")}</label>
                 <select
                   value={manualForm.is_billable ? "true" : "false"}
                   onChange={(e) => setManualForm({ ...manualForm, is_billable: e.target.value === "true" })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value="true">Billable</option>
-                  <option value="false">Non-Billable</option>
+                  <option value="true">{t("timeTracker.billable")}</option>
+                  <option value="false">{t("timeTracker.nonBillable")}</option>
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Start Time <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.startTime")} <span className="text-red-500">*</span></label>
                 <input
                   type="datetime-local"
                   value={manualForm.start_time}
@@ -713,7 +715,7 @@ const TimeTracker: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">End Time <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.endTime")} <span className="text-red-500">*</span></label>
                 <input
                   type="datetime-local"
                   value={manualForm.end_time}
@@ -725,9 +727,9 @@ const TimeTracker: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-1.5 text-slate-700">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+              <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.description")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
               <textarea
-                placeholder="Add any notes or context for this entry..."
+                placeholder={t("timeTracker.descriptionPlaceholder")}
                 value={manualForm.description}
                 onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
                 rows={2}
@@ -740,7 +742,7 @@ const TimeTracker: React.FC = () => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg disabled:opacity-50 transition-all duration-200 shadow-lg hover:scale-[1.02]"
             >
-              {loading ? "Creating..." : "Create Entry"}
+              {loading ? t("timeTracker.creating") : t("timeTracker.createEntry")}
             </button>
           </form>
         </div>
@@ -749,14 +751,14 @@ const TimeTracker: React.FC = () => {
       {/* Automatic Timer Form */}
       {mode === "automatic" && !activeEntry && (
         <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4 text-slate-900">Start Timer</h2>
+          <h2 className="text-xl font-bold mb-4 text-slate-900">{t("timeTracker.startTimer")}</h2>
           <form onSubmit={handleStartAutomatic} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Entry Name <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.entryName")} <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  placeholder="e.g. Fix login bug"
+                  placeholder={t("timeTracker.entryNamePlaceholder")}
                   value={automaticForm.task_name}
                   onChange={(e) => setAutomaticForm({ ...automaticForm, task_name: e.target.value })}
                   required
@@ -764,7 +766,7 @@ const TimeTracker: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Project</label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.project")}</label>
                 <select
                   value={automaticForm.project_id}
                   onChange={(e) => {
@@ -774,7 +776,7 @@ const TimeTracker: React.FC = () => {
                   }}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value="others">Others (General Work)</option>
+                  <option value="others">{t("timeTracker.othersGeneralWork")}</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id.toString()}>
                       {project.name}
@@ -787,12 +789,12 @@ const TimeTracker: React.FC = () => {
             {/* Task selector — only shown when a real project is selected */}
             {automaticForm.project_id && automaticForm.project_id !== "others" && (
               loadingTasks ? (
-                <p className="text-sm text-slate-500 px-1">Loading tasks...</p>
+                <p className="text-sm text-slate-500 px-1">{t("timeTracker.loadingTasks")}</p>
               ) : automaticProjectTasks.length === 0 ? (
-                <p className="text-sm text-amber-600 px-1">No incomplete tasks in this project. You can still log time without a task.</p>
+                <p className="text-sm text-amber-600 px-1">{t("timeTracker.noIncompleteTasks")}</p>
               ) : (
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Task <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.task")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
                   <select
                     value={automaticForm.task_id}
                     onChange={(e) => {
@@ -805,7 +807,7 @@ const TimeTracker: React.FC = () => {
                     }}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                   >
-                    <option value="">— Select Task —</option>
+                    <option value="">{t("timeTracker.selectTask")}</option>
                     {automaticProjectTasks.map((task) => (
                       <option key={task.id} value={task.id.toString()}>
                         {task.title}{task.current_column_name ? ` (${task.current_column_name})` : ""}
@@ -818,32 +820,32 @@ const TimeTracker: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Category <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.category")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
                 <input
                   type="text"
-                  placeholder="e.g. Development, Meeting, Support"
+                  placeholder={t("timeTracker.categoryPlaceholder")}
                   value={automaticForm.category}
                   onChange={(e) => setAutomaticForm({ ...automaticForm, category: e.target.value })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Billing</label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.billing")}</label>
                 <select
                   value={automaticForm.is_billable ? "true" : "false"}
                   onChange={(e) => setAutomaticForm({ ...automaticForm, is_billable: e.target.value === "true" })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value="true">Billable</option>
-                  <option value="false">Non-Billable</option>
+                  <option value="true">{t("timeTracker.billable")}</option>
+                  <option value="false">{t("timeTracker.nonBillable")}</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-1.5 text-slate-700">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+              <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.description")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
               <textarea
-                placeholder="Add any notes or context for this entry..."
+                placeholder={t("timeTracker.descriptionPlaceholder")}
                 value={automaticForm.description}
                 onChange={(e) => setAutomaticForm({ ...automaticForm, description: e.target.value })}
                 rows={2}
@@ -856,7 +858,7 @@ const TimeTracker: React.FC = () => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg text-lg disabled:opacity-50 transition-all duration-200 shadow-lg hover:scale-[1.02]"
             >
-              {loading ? "Starting..." : "Start Timer"}
+              {loading ? t("timeTracker.starting") : t("timeTracker.startTimer")}
             </button>
           </form>
         </div>
@@ -875,7 +877,7 @@ const TimeTracker: React.FC = () => {
                 type="text"
                 value={searchEntries}
                 onChange={(e) => { setSearchEntries(e.target.value); setCurrentPage(1); }}
-                placeholder="Search by title, project, or category..."
+                placeholder={t("timeTracker.searchPlaceholder")}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               />
             </div>
@@ -884,8 +886,8 @@ const TimeTracker: React.FC = () => {
               onChange={(e) => { setProjectFilter(e.target.value); setCurrentPage(1); }}
               className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             >
-              <option value="all">All Projects</option>
-              <option value="others">Others (General Work)</option>
+              <option value="all">{t("timeTracker.allProjects")}</option>
+              <option value="others">{t("timeTracker.othersGeneralWork")}</option>
               {projects.map((p) => (
                 <option key={p.id} value={String(p.id)}>{p.name}</option>
               ))}
@@ -901,7 +903,7 @@ const TimeTracker: React.FC = () => {
                       : "text-slate-500 hover:text-slate-700"
                   }`}
                 >
-                  {s === "all" ? "All" : s === "completed" ? "Completed" : "Running"}
+                  {s === "all" ? t("common.all") : s === "completed" ? t("timeTracker.completed") : t("timeTracker.running")}
                 </button>
               ))}
             </div>
@@ -916,7 +918,7 @@ const TimeTracker: React.FC = () => {
                 <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p>{searchEntries || statusFilter !== "all" || projectFilter !== "all" ? "No entries match your filters" : "No time entries yet"}</p>
+                <p>{searchEntries || statusFilter !== "all" || projectFilter !== "all" ? t("timeTracker.noEntriesMatch") : t("timeTracker.noEntriesYet")}</p>
               </div>
             ) : (
               <>
@@ -924,15 +926,15 @@ const TimeTracker: React.FC = () => {
                   <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Title</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Project</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Start</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">End</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Duration</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">View</th>
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Edit</th>
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Delete</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("timeTracker.title")}</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("timeTracker.project")}</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("timeTracker.start")}</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("timeTracker.end")}</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("timeTracker.duration")}</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("timeTracker.status")}</th>
+                        <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("common.view")}</th>
+                        <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("common.edit")}</th>
+                        <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("common.delete")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -946,7 +948,7 @@ const TimeTracker: React.FC = () => {
                                   onClick={() => handleContinueEntry(entry)}
                                   disabled={loading || !!activeEntry}
                                   className="flex-shrink-0 text-green-600 hover:text-green-800 hover:bg-green-50 p-0.5 rounded transition-colors disabled:opacity-40"
-                                  title={activeEntry ? "Stop current timer first" : "Continue — start live timer with same info"}
+                                  title={activeEntry ? t("timeTracker.stopCurrentFirst") : t("timeTracker.continueTimer")}
                                 >
                                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M8 5v14l11-7z" />
@@ -956,7 +958,7 @@ const TimeTracker: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                            {typeof entry.project === 'string' ? entry.project : entry.project?.name || "Others (General Work)"}
+                            {typeof entry.project === 'string' ? entry.project : entry.project?.name || t("timeTracker.othersGeneralWork")}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                             {formatPKTTime(entry.start_time)}
@@ -1043,7 +1045,7 @@ const TimeTracker: React.FC = () => {
                 {filteredEntries.length > 0 && (
                   <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                     <div className="text-sm text-slate-600">
-                      Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, filteredEntries.length)}</span> of <span className="font-semibold">{filteredEntries.length}</span> entries
+                      {t("common.showing")} <span className="font-semibold">{startIndex + 1}</span> {t("common.to")} <span className="font-semibold">{Math.min(endIndex, filteredEntries.length)}</span> {t("common.of")} <span className="font-semibold">{filteredEntries.length}</span> {t("common.entries")}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1051,7 +1053,7 @@ const TimeTracker: React.FC = () => {
                         disabled={currentPage === 1 || loading}
                         className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Previous
+                        {t("common.previous")}
                       </button>
                       <div className="flex items-center gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -1073,7 +1075,7 @@ const TimeTracker: React.FC = () => {
                         disabled={currentPage === totalPages || loading}
                         className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Next
+                        {t("common.next")}
                       </button>
                     </div>
                   </div>
@@ -1091,7 +1093,7 @@ const TimeTracker: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-              <h3 className="text-xl font-bold">Edit Entry</h3>
+              <h3 className="text-xl font-bold">{t("timeTracker.editEntry")}</h3>
               <button
                 onClick={() => setShowEditModal(false)}
                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
@@ -1105,10 +1107,10 @@ const TimeTracker: React.FC = () => {
             {/* Modal Content */}
             <form onSubmit={handleUpdateEntry} id="editEntryForm" className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Entry Name <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.entryName")} <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  placeholder="e.g. Fix login bug"
+                  placeholder={t("timeTracker.entryNamePlaceholder")}
                   value={editForm.task_name}
                   onChange={(e) => setEditForm({ ...editForm, task_name: e.target.value })}
                   required
@@ -1117,10 +1119,10 @@ const TimeTracker: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Category <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.category")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
                 <input
                   type="text"
-                  placeholder="e.g. Development, Meeting, Support"
+                  placeholder={t("timeTracker.categoryPlaceholder")}
                   value={editForm.category}
                   onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
@@ -1129,7 +1131,7 @@ const TimeTracker: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">Start Time <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.startTime")} <span className="text-red-500">*</span></label>
                   <input
                     type="datetime-local"
                     value={editForm.start_time}
@@ -1139,7 +1141,7 @@ const TimeTracker: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">End Time <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.endTime")} <span className="text-red-500">*</span></label>
                   <input
                     type="datetime-local"
                     value={editForm.end_time}
@@ -1151,9 +1153,9 @@ const TimeTracker: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-semibold mb-1.5 text-slate-700">{t("timeTracker.description")} <span className="text-slate-400 font-normal">({t("common.optional")})</span></label>
                 <textarea
-                  placeholder="Add any notes or context for this entry..."
+                  placeholder={t("timeTracker.descriptionPlaceholder")}
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   rows={3}
@@ -1169,7 +1171,7 @@ const TimeTracker: React.FC = () => {
                 onClick={() => setShowEditModal(false)}
                 className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
@@ -1177,7 +1179,7 @@ const TimeTracker: React.FC = () => {
                 disabled={loading}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg disabled:opacity-50 transition-all duration-200"
               >
-                {loading ? "Updating..." : "Update Entry"}
+                {loading ? t("timeTracker.updating") : t("timeTracker.updateEntry")}
               </button>
             </div>
           </div>
@@ -1189,7 +1191,7 @@ const TimeTracker: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-              <h3 className="text-lg font-bold">Stop Timer</h3>
+              <h3 className="text-lg font-bold">{t("timeTracker.stopTimer")}</h3>
               <button
                 onClick={() => setShowStopModal(false)}
                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
@@ -1201,16 +1203,16 @@ const TimeTracker: React.FC = () => {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-slate-700 font-medium">
-                Stopping timer for: <span className="font-bold text-slate-900">{activeEntry.task_name}</span>
+                {t("timeTracker.stoppingTimerFor")} <span className="font-bold text-slate-900">{activeEntry.task_name}</span>
               </p>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Move Task To...</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t("timeTracker.moveTaskToLabel")}</label>
                 <select
                   value={stopColumnType}
                   onChange={(e) => setStopColumnType(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
                 >
-                  <option value="">Keep current status</option>
+                  <option value="">{t("timeTracker.keepCurrent")}</option>
                   {stopModalColumns.map((col) => (
                     <option key={col.id} value={col.column_type}>
                       {col.name}
@@ -1225,14 +1227,14 @@ const TimeTracker: React.FC = () => {
                 disabled={loading}
                 className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => handleStopAutomatic(stopColumnType || undefined)}
                 disabled={loading}
                 className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
               >
-                {loading ? "Stopping..." : "Stop Timer"}
+                {loading ? t("timeTracker.stopping") : t("timeTracker.stopTimer")}
               </button>
             </div>
           </div>
@@ -1245,7 +1247,7 @@ const TimeTracker: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-              <h3 className="text-xl font-bold">Entry Details</h3>
+              <h3 className="text-xl font-bold">{t("timeTracker.entryDetails")}</h3>
               <button
                 onClick={() => setShowDetailModal(false)}
                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
@@ -1260,27 +1262,27 @@ const TimeTracker: React.FC = () => {
             <div className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* Title */}
               <div>
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Title</h4>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.title")}</h4>
                 <p className="text-lg font-bold text-slate-900">{selectedEntry.task_name}</p>
               </div>
 
               {/* Project + Task + Task Board Status */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Project</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.project")}</h4>
                   <div className="flex items-center gap-2">
                     {selectedEntry.project?.color && (
                       <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: selectedEntry.project.color }} />
                     )}
-                    <p className="text-slate-900 font-medium">{typeof selectedEntry.project === 'string' ? selectedEntry.project : selectedEntry.project?.name || "Others (General Work)"}</p>
+                    <p className="text-slate-900 font-medium">{typeof selectedEntry.project === 'string' ? selectedEntry.project : selectedEntry.project?.name || t("timeTracker.othersGeneralWork")}</p>
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Task</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.task")}</h4>
                   <p className="text-slate-900 font-medium">{selectedEntry.task?.title || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Task Board Status</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.taskBoardStatus")}</h4>
                   {selectedEntry.task_column_name ? (
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                       selectedEntry.task_column_type === "done"
@@ -1306,15 +1308,15 @@ const TimeTracker: React.FC = () => {
               {/* Category + Billable */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Category</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.category")}</h4>
                   <p className="text-slate-900 font-medium">{selectedEntry.category || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Billable</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.billable")}</h4>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                     selectedEntry.is_billable ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
                   }`}>
-                    {selectedEntry.is_billable ? "Billable" : "Non-Billable"}
+                    {selectedEntry.is_billable ? t("timeTracker.billable") : t("timeTracker.nonBillable")}
                   </span>
                 </div>
               </div>
@@ -1322,15 +1324,15 @@ const TimeTracker: React.FC = () => {
               {/* Time block */}
               <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Start Time</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.startTime")}</h4>
                   <p className="text-sm text-slate-900 font-medium">{formatPKTTime(selectedEntry.start_time)}</p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">End Time</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.endTime")}</h4>
                   <p className="text-sm text-slate-900 font-medium">{selectedEntry.end_time ? formatPKTTime(selectedEntry.end_time) : "—"}</p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Duration</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.duration")}</h4>
                   <p className="text-sm font-bold text-blue-600">
                     {selectedEntry.duration_hours ? formatHoursAsHoursMinutes(selectedEntry.duration_hours) : "—"}
                   </p>
@@ -1340,7 +1342,7 @@ const TimeTracker: React.FC = () => {
               {/* Entry Status + Logged At */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Entry Status</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.entryStatus")}</h4>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                     selectedEntry.status === "active"
                       ? "bg-yellow-100 text-yellow-800"
@@ -1366,7 +1368,7 @@ const TimeTracker: React.FC = () => {
               {/* Description */}
               {(selectedEntry.notes || selectedEntry.description) && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Description</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("timeTracker.description")}</h4>
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <p className="text-slate-700 whitespace-pre-wrap break-words">{selectedEntry.notes || selectedEntry.description}</p>
                   </div>
@@ -1380,7 +1382,7 @@ const TimeTracker: React.FC = () => {
                 onClick={() => setShowDetailModal(false)}
                 className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
           </div>

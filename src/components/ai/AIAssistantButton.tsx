@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAIAssistant } from "../../context/AIAssistantContext";
 import type { ButtonCorner } from "../../context/AIAssistantContext";
 import AIAssistantPanel from "./AIAssistantPanel";
@@ -22,6 +23,7 @@ const getCornerStyles = (sidebarW: number): Record<ButtonCorner, React.CSSProper
 });
 
 const AIAssistantButton: React.FC = () => {
+  const { t } = useTranslation();
   const { isOpen, isMinimized, openPanel, restorePanel, buttonCorner, setButtonCorner } = useAIAssistant();
   const [isDragging, setIsDragging] = useState(false);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -128,7 +130,7 @@ const AIAssistantButton: React.FC = () => {
                 ? { left: dragPos.x - 28, top: dragPos.y - 28, position: "fixed" as const, transition: "none" }
                 : cornerStyles[buttonCorner]
             }
-            title={isMinimized ? "Restore AI Assistant" : "Open AI Assistant"}
+            title={isMinimized ? t("ai.restoreAssistant") : t("ai.openAssistant")}
           >
             <svg className="w-6 h-6 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../api/interceptor";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getStoredUser } from "../../api/auth";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../api/config";
@@ -9,6 +10,7 @@ import AnalogClockIcon from "../../components/AnalogClockIcon";
 import { CacheManager } from "../../utils/cacheManager";
 
 const Profile: React.FC = () => {
+  const { t } = useTranslation();
   const { updateUser: updateContextUser } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
@@ -121,7 +123,7 @@ const Profile: React.FC = () => {
       setShowEditModal(false);
       setSelectedFile(null);
       setLocalPreview(null);
-      alert("Profile updated successfully!");
+      alert(t("profile.profileUpdated"));
     } catch (error: any) {
       alert(error?.response?.data?.detail || "Failed to update profile");
     } finally {
@@ -143,10 +145,10 @@ const Profile: React.FC = () => {
             <AnalogClockIcon size={50} className="flex-shrink-0" />
             <div>
               <p className="text-base font-bold text-white mb-1 flex items-center gap-2">
-                Profile
+                {t("profile.title")}
               </p>
               <p className="text-sm text-white/90">
-                View and manage your personal information and account settings
+                {t("profile.subtitle")}
               </p>
             </div>
           </div>
@@ -197,15 +199,15 @@ const Profile: React.FC = () => {
             </div>
 
             <h2 className="text-2xl font-bold text-slate-900 mb-1">{user.full_name}</h2>
-            <p className="text-slate-600 mb-1">{user.job_title || "No job title"}</p>
-            <p className="text-sm text-slate-500">{user.department || "No department"}</p>
+            <p className="text-slate-600 mb-1">{user.job_title || t("profile.noJobTitle")}</p>
+            <p className="text-sm text-slate-500">{user.department || t("profile.noDepartment")}</p>
             <p className="text-sm text-slate-500 mt-2">{user.email}</p>
 
             <button
               onClick={() => setShowEditModal(true)}
               className="w-full mt-6 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200"
             >
-              Edit Profile
+              {t("profile.editProfile")}
             </button>
           </div>
         </div>
@@ -214,39 +216,39 @@ const Profile: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-6 pb-4 border-b border-slate-200">
-              Personal Information
+              {t("profile.personalInfo")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Full Name</p>
+                <p className="text-sm text-slate-600 font-semibold mb-2">{t("profile.fullName")}</p>
                 <p className="text-base text-slate-900">{user.full_name}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Email Address</p>
+                <p className="text-sm text-slate-600 font-semibold mb-2">{t("profile.emailAddress")}</p>
                 <p className="text-base text-slate-900">{user.email}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Job Title</p>
-                <p className="text-base text-slate-900">{user.job_title || "N/A"}</p>
+                <p className="text-sm text-slate-600 font-semibold mb-2">{t("profile.jobTitle")}</p>
+                <p className="text-base text-slate-900">{user.job_title || t("common.na")}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Department</p>
-                <p className="text-base text-slate-900">{user.department || "N/A"}</p>
+                <p className="text-sm text-slate-600 font-semibold mb-2">{t("profile.department")}</p>
+                <p className="text-base text-slate-900">{user.department || t("common.na")}</p>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-6 pb-4 border-b border-slate-200">
-              Account Information
+              {t("profile.accountInfo")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Username</p>
-                <p className="text-base text-slate-900">{user.username || "N/A"}</p>
+                <p className="text-sm text-slate-600 font-semibold mb-2">{t("profile.username")}</p>
+                <p className="text-base text-slate-900">{user.username || t("common.na")}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-600 font-semibold mb-2">Role</p>
+                <p className="text-sm text-slate-600 font-semibold mb-2">{t("profile.role")}</p>
                 <p className="text-base text-slate-900 capitalize">{user.role || "Employee"}</p>
               </div>
             </div>
@@ -260,7 +262,7 @@ const Profile: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-              <h3 className="text-xl font-bold">Edit Profile</h3>
+              <h3 className="text-xl font-bold">{t("profile.editProfile")}</h3>
               <button
                 onClick={() => {
                   setShowEditModal(false);
@@ -308,7 +310,7 @@ const Profile: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("profile.fullName")}</label>
                   <input
                     type="text"
                     name="full_name"
@@ -319,7 +321,7 @@ const Profile: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Job Title</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("profile.jobTitle")}</label>
                   <input
                     type="text"
                     name="job_title"
@@ -330,7 +332,7 @@ const Profile: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Department</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t("profile.department")}</label>
                   <input
                     type="text"
                     name="department"
@@ -356,14 +358,14 @@ const Profile: React.FC = () => {
                 }}
                 className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleSaveProfile}
                 disabled={loading}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading ? t("common.saving") : t("profile.saveChanges")}
               </button>
             </div>
           </div>

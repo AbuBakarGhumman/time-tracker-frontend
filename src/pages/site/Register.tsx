@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { uploadProfileImage } from "../../api/images";
 import { registerUser, registerCompany } from "../../api/auth";
 
 type RegistrationType = "individual" | "company";
 
 const Register: React.FC = () => {
+  const { t } = useTranslation();
   const [registrationType, setRegistrationType] = useState<RegistrationType>("individual");
   
   const [formData, setFormData] = useState({
@@ -78,7 +80,7 @@ const Register: React.FC = () => {
     // Handle Individual Registration
     if (registrationType === "individual") {
       if (formData.password !== formData.confirm_password) {
-        setError("Passwords do not match");
+        setError(t("auth.passwordsDoNotMatch"));
         return;
       }
 
@@ -103,7 +105,7 @@ const Register: React.FC = () => {
         
         navigate("/login", { state: { message: "Registration successful! Please log in." } });
       } catch (error: any) {
-        setError(error.message || "Registration failed");
+        setError(error.message || t("auth.registrationFailed"));
       } finally {
         setLoading(false);
       }
@@ -111,15 +113,15 @@ const Register: React.FC = () => {
     // Handle Company Registration
     else {
       if (companyData.password !== companyData.confirm_password) {
-        setError("Passwords do not match");
+        setError(t("auth.passwordsDoNotMatch"));
         return;
       }
 
       // Validate required fields
-      if (!companyData.company_name || !companyData.company_email || 
-          !companyData.admin_name || !companyData.admin_username || 
+      if (!companyData.company_name || !companyData.company_email ||
+          !companyData.admin_name || !companyData.admin_username ||
           !companyData.admin_email || !companyData.password) {
-        setError("Please fill in all required fields");
+        setError(t("auth.fillAllFields"));
         return;
       }
 
@@ -151,7 +153,7 @@ const Register: React.FC = () => {
           } 
         });
       } catch (error: any) {
-        setError(error.message || "Company registration failed");
+        setError(error.message || t("auth.companyRegistrationFailed"));
       } finally {
         setLoading(false);
       }
@@ -171,10 +173,10 @@ const Register: React.FC = () => {
         {/* Logo/Brand */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-slate-900 mb-2">
-            Create Your Account
+            {t("auth.createYourAccount")}
           </h2>
           <p className="text-slate-600">
-            Join thousands of teams tracking time smarter
+            {t("auth.joinThousands")}
           </p>
         </div>
 
@@ -198,7 +200,7 @@ const Register: React.FC = () => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                Individual
+                {t("common.individual")}
               </div>
             </button>
             <button
@@ -218,7 +220,7 @@ const Register: React.FC = () => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
-                Company
+                {t("auth.company")}
               </div>
             </button>
           </div>
@@ -262,19 +264,19 @@ const Register: React.FC = () => {
                     />
                   </label>
                 </div>
-                <p className="text-xs text-slate-500 mt-2">Optional: Upload profile picture</p>
+                <p className="text-xs text-slate-500 mt-2">{t("auth.uploadProfilePic")}</p>
               </div>
 
               {/* Two Column Layout for Name and Username */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Full Name
+                    {t("auth.fullName")}
                   </label>
                   <input
                     type="text"
                     name="full_name"
-                    placeholder="John Doe"
+                    placeholder={t("auth.fullNamePlaceholder")}
                     value={formData.full_name}
                     onChange={handleChange}
                     required
@@ -283,12 +285,12 @@ const Register: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Username
+                    {t("auth.username")}
                   </label>
                   <input
                     type="text"
                     name="username"
-                    placeholder="johndoe"
+                    placeholder={t("auth.usernamePlaceholder")}
                     value={formData.username}
                     onChange={handleChange}
                     required
@@ -300,7 +302,7 @@ const Register: React.FC = () => {
               {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Email Address
+                  {t("auth.emailAddress")}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -311,7 +313,7 @@ const Register: React.FC = () => {
                   <input
                     type="email"
                     name="email"
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -324,7 +326,7 @@ const Register: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Password
+                    {t("auth.password")}
                   </label>
                   <div className="relative">
                     <input
@@ -356,7 +358,7 @@ const Register: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Confirm Password
+                    {t("auth.confirmPassword")}
                   </label>
                   <div className="relative">
                     <input
@@ -392,12 +394,12 @@ const Register: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Job Title <span className="text-slate-400 font-normal">(optional)</span>
+                    {t("auth.jobTitle")} <span className="text-slate-400 font-normal">{t("common.optional")}</span>
                   </label>
                   <input
                     type="text"
                     name="job_title"
-                    placeholder="Software Engineer"
+                    placeholder={t("auth.jobTitlePlaceholder")}
                     value={formData.job_title}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
@@ -405,12 +407,12 @@ const Register: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Department <span className="text-slate-400 font-normal">(optional)</span>
+                    {t("auth.department")} <span className="text-slate-400 font-normal">{t("common.optional")}</span>
                   </label>
                   <input
                     type="text"
                     name="department"
-                    placeholder="Engineering"
+                    placeholder={t("auth.departmentPlaceholder")}
                     value={formData.department}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
@@ -427,13 +429,13 @@ const Register: React.FC = () => {
                   className="w-4 h-4 mt-1 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 />
                 <label htmlFor="terms" className="text-sm text-slate-600">
-                  I agree to the{" "}
+                  {t("auth.agreeToTerms")}{" "}
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
-                    Terms of Service
+                    {t("auth.termsOfService")}
                   </a>{" "}
-                  and{" "}
+                  {t("auth.and")}{" "}
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
-                    Privacy Policy
+                    {t("auth.privacyPolicy")}
                   </a>
                 </label>
               </div>
@@ -450,10 +452,10 @@ const Register: React.FC = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Creating account...
+                    {t("auth.creatingAccount")}
                   </span>
                 ) : (
-                  "Create Account"
+                  t("auth.createAccount")
                 )}
               </button>
             </form>
@@ -486,18 +488,18 @@ const Register: React.FC = () => {
                     />
                   </label>
                 </div>
-                <p className="text-xs text-slate-500 mt-2">Optional: Upload company logo</p>
+                <p className="text-xs text-slate-500 mt-2">{t("auth.uploadCompanyLogo")}</p>
               </div>
 
               {/* Company Name */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Company Name
+                  {t("auth.companyName")}
                 </label>
                 <input
                   type="text"
                   name="company_name"
-                  placeholder="Acme Corporation"
+                  placeholder={t("auth.companyNamePlaceholder")}
                   value={companyData.company_name}
                   onChange={handleChange}
                   required
@@ -508,7 +510,7 @@ const Register: React.FC = () => {
               {/* Company Email */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Company Email
+                  {t("auth.companyEmail")}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -519,7 +521,7 @@ const Register: React.FC = () => {
                   <input
                     type="email"
                     name="company_email"
-                    placeholder="contact@acme.com"
+                    placeholder={t("auth.companyEmailPlaceholder")}
                     value={companyData.company_email}
                     onChange={handleChange}
                     required
@@ -534,18 +536,18 @@ const Register: React.FC = () => {
                   <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  Admin Account Details
+                  {t("auth.adminAccountDetails")}
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Admin Full Name
+                      {t("auth.adminFullName")}
                     </label>
                     <input
                       type="text"
                       name="admin_name"
-                      placeholder="John Doe"
+                      placeholder={t("auth.fullNamePlaceholder")}
                       value={companyData.admin_name}
                       onChange={handleChange}
                       required
@@ -554,12 +556,12 @@ const Register: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Admin Username
+                      {t("auth.adminUsername")}
                     </label>
                     <input
                       type="text"
                       name="admin_username"
-                      placeholder="johndoe"
+                      placeholder={t("auth.usernamePlaceholder")}
                       value={companyData.admin_username}
                       onChange={handleChange}
                       required
@@ -570,12 +572,12 @@ const Register: React.FC = () => {
 
                 <div className="mb-4">
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Admin Email
+                    {t("auth.adminEmail")}
                   </label>
                   <input
                     type="email"
                     name="admin_email"
-                    placeholder="admin@acme.com"
+                    placeholder={t("auth.adminEmailPlaceholder")}
                     value={companyData.admin_email}
                     onChange={handleChange}
                     required
@@ -587,7 +589,7 @@ const Register: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Password
+                      {t("auth.password")}
                     </label>
                     <div className="relative">
                       <input
@@ -619,7 +621,7 @@ const Register: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Confirm Password
+                      {t("auth.confirmPassword")}
                     </label>
                     <div className="relative">
                       <input
@@ -656,7 +658,7 @@ const Register: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Company Size <span className="text-slate-400 font-normal">(optional)</span>
+                    {t("auth.companySize")} <span className="text-slate-400 font-normal">{t("common.optional")}</span>
                   </label>
                   <select
                     name="company_size"
@@ -664,17 +666,17 @@ const Register: React.FC = () => {
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none cursor-pointer"
                   >
-                    <option value="">Select company size</option>
-                    <option value="1-10">1-10 employees</option>
-                    <option value="11-50">11-50 employees</option>
-                    <option value="51-200">51-200 employees</option>
-                    <option value="201-500">201-500 employees</option>
-                    <option value="500+">500+ employees</option>
+                    <option value="">{t("auth.selectCompanySize")}</option>
+                    <option value="1-10">{t("auth.companySize1")}</option>
+                    <option value="11-50">{t("auth.companySize2")}</option>
+                    <option value="51-200">{t("auth.companySize3")}</option>
+                    <option value="201-500">{t("auth.companySize4")}</option>
+                    <option value="500+">{t("auth.companySize5")}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Industry <span className="text-slate-400 font-normal">(optional)</span>
+                    {t("auth.industry")} <span className="text-slate-400 font-normal">{t("common.optional")}</span>
                   </label>
                   <select
                     name="industry"
@@ -682,15 +684,15 @@ const Register: React.FC = () => {
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none cursor-pointer"
                   >
-                    <option value="">Select industry</option>
-                    <option value="technology">Technology</option>
-                    <option value="finance">Finance</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="education">Education</option>
-                    <option value="retail">Retail</option>
-                    <option value="manufacturing">Manufacturing</option>
-                    <option value="consulting">Consulting</option>
-                    <option value="other">Other</option>
+                    <option value="">{t("auth.selectIndustry")}</option>
+                    <option value="technology">{t("auth.industryTech")}</option>
+                    <option value="finance">{t("auth.industryFinance")}</option>
+                    <option value="healthcare">{t("auth.industryHealthcare")}</option>
+                    <option value="education">{t("auth.industryEducation")}</option>
+                    <option value="retail">{t("auth.industryRetail")}</option>
+                    <option value="manufacturing">{t("auth.industryManufacturing")}</option>
+                    <option value="consulting">{t("auth.industryConsulting")}</option>
+                    <option value="other">{t("auth.industryOther")}</option>
                   </select>
                 </div>
               </div>
@@ -704,13 +706,13 @@ const Register: React.FC = () => {
                   className="w-4 h-4 mt-1 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 />
                 <label htmlFor="terms-company" className="text-sm text-slate-600">
-                  I agree to the{" "}
+                  {t("auth.agreeToTerms")}{" "}
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
-                    Terms of Service
+                    {t("auth.termsOfService")}
                   </a>{" "}
-                  and{" "}
+                  {t("auth.and")}{" "}
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
-                    Privacy Policy
+                    {t("auth.privacyPolicy")}
                   </a>
                 </label>
               </div>
@@ -727,10 +729,10 @@ const Register: React.FC = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Creating workspace...
+                    {t("auth.creatingWorkspace")}
                   </span>
                 ) : (
-                  "Create Company Workspace"
+                  t("auth.createCompanyWorkspace")
                 )}
               </button>
             </form>
@@ -739,12 +741,12 @@ const Register: React.FC = () => {
 
         {/* Login Link */}
         <p className="mt-6 text-center text-slate-600">
-          Already have an account?{" "}
+          {t("auth.alreadyHaveAccount")}{" "}
           <Link
             to="/login"
             className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
           >
-            Sign in instead
+            {t("auth.signInInstead")}
           </Link>
         </p>
       </div>
