@@ -542,7 +542,7 @@ const Settings: React.FC = () => {
                     placeholder={t("settings.brandNamePlaceholder")}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
                   />
-                  <p className="text-xs text-slate-400 mt-1">Shown in the PDF report header. Leave blank to use "Time Tracker Pro".</p>
+                  <p className="text-xs text-slate-400 mt-1">Shown in the PDF report header. Leave blank to use "SoftDesk".</p>
                 </div>
 
                 {/* Accent Color */}
@@ -621,7 +621,7 @@ const Settings: React.FC = () => {
                         />
                       )}
                       <div>
-                        <p className="font-bold text-sm">{settings.report_brand_name || "Time Tracker Pro"}</p>
+                        <p className="font-bold text-sm">{settings.report_brand_name || "SoftDesk"}</p>
                         <p className="text-xs text-white/70">Attendance Report — Jan 1, 2026 — Mar 26, 2026</p>
                       </div>
                     </div>

@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+html { scroll-behavior: smooth; }
+
 /* ── Hide scrollbar indicators globally while keeping scroll functionality ── */
 * {
   scrollbar-width: none; /* Firefox */
@@ -147,3 +149,89 @@
 }
 /* Disable transition on elements that shouldn't flash */
 .no-transition, .no-transition * { transition: none !important; }
+
+/* ── Site page shared animations ────────────────────────────────────────── */
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%       { transform: translate(20px, -50px) scale(1.1); }
+  50%       { transform: translate(-20px, 20px) scale(0.9); }
+  75%       { transform: translate(50px, 50px) scale(1.05); }
+}
+.animate-blob                 { animation: blob 7s infinite; }
+.animation-delay-1000         { animation-delay: 1s; }
+.animation-delay-2000         { animation-delay: 2s; }
+.animation-delay-3000         { animation-delay: 3s; }
+.animation-delay-4000         { animation-delay: 4s; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-fade-up         { animation: fade-up   0.7s ease-out both; }
+.animate-fade-in         { animation: fade-in   0.6s ease-out both; }
+.animate-slide-in-left   { animation: slide-in-left  0.7s ease-out both; }
+.animate-slide-in-right  { animation: slide-in-right 0.7s ease-out both; }
+.anim-delay-100  { animation-delay: 0.1s; }
+.anim-delay-200  { animation-delay: 0.2s; }
+.anim-delay-300  { animation-delay: 0.3s; }
+.anim-delay-400  { animation-delay: 0.4s; }
+.anim-delay-500  { animation-delay: 0.5s; }
+.anim-delay-600  { animation-delay: 0.6s; }
+.anim-delay-700  { animation-delay: 0.7s; }
+.anim-delay-800  { animation-delay: 0.8s; }
+
+/* ── Floating / pulsing decoration ─────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-float-slow { animation: float 6s ease-in-out infinite; }
+.animate-float-delay { animation: float 4s ease-in-out 1.5s infinite; }
+
+/* ── Scale-in for cards / pricing ──────────────────────────────────────── */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in { animation: scale-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Smooth slide-up (more elastic than fade-up) ───────────────────────── */
+@keyframes slide-up-elastic {
+  from { opacity: 0; transform: translateY(48px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up-elastic { animation: slide-up-elastic 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Shimmer / gradient sweep for hero badge ───────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ── Stagger children (used via JS-applied class) ──────────────────────── */
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.45s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.55s; }
+
+/* ── Scroll-linked header shadow ───────────────────────────────────────── */
+.header-scrolled { box-shadow: 0 1px 24px rgba(0,0,0,0.08); }

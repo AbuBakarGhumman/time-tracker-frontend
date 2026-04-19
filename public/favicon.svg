@@ -5,10 +5,10 @@
       <stop offset="100%" style="stop-color:#9333EA;stop-opacity:1" />
     </linearGradient>
   </defs>
-  
+
   <!-- Rounded rectangle background with gradient -->
   <rect width="64" height="64" rx="12" fill="url(#grad)"/>
-  
+
   <!-- Clock icon -->
   <g transform="translate(32, 32)">
     <!-- Clock circle -->

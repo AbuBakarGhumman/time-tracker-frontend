@@ -1,5 +1,5 @@
 /**
- * App Router — TimeTrack Pro
+ * App Router — SoftDesk
  * React Router v6 routes (public + protected) with shared Header/Footer layout.
  */
 
@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UserProvider } from "./context/UserContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AIAssistantProvider } from "./context/AIAssistantContext";
+import { BrandingProvider } from "./context/BrandingContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import DashboardLayout from "./components/DashboardLayout";
@@ -46,6 +47,7 @@ import PlatformCompanies from "./pages/platform_admin/PlatformCompanies";
 import PlatformAnalytics from "./pages/platform_admin/PlatformAnalytics";
 import PlatformProfile from "./pages/platform_admin/PlatformProfile";
 import PlatformSettings from "./pages/platform_admin/PlatformSettings";
+import PlatformBranding from "./pages/platform_admin/PlatformBranding";
 
 import { getStoredToken } from "./api/auth";
 import axios from "./api/interceptor";
@@ -89,6 +91,7 @@ function App() {
 
   return (
     <ThemeProvider>
+    <BrandingProvider>
     <UserProvider>
     <AIAssistantProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
@@ -97,8 +100,8 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<Navigate to="/home" replace />} />
             <Route path="/home" element={<PublicLayout><Intro /></PublicLayout>} />
-            <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
-            <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
             <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
             <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
@@ -129,6 +132,7 @@ function App() {
             <Route path="/platform/analytics" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformAnalytics /></PlatformAdminLayout>} />} />
             <Route path="/platform/profile" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformProfile /></PlatformAdminLayout>} />} />
             <Route path="/platform/settings" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformSettings /></PlatformAdminLayout>} />} />
+            <Route path="/platform/branding" element={<ProtectedRoute element={<PlatformAdminLayout><PlatformBranding /></PlatformAdminLayout>} />} />
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -137,6 +141,7 @@ function App() {
       </BrowserRouter>
     </AIAssistantProvider>
     </UserProvider>
+    </BrandingProvider>
     </ThemeProvider>
   );
 }

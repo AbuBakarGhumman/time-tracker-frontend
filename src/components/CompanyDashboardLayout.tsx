@@ -6,6 +6,7 @@ import { logout, getStoredEmployee, getStoredCompany } from "../api/auth";
 import { useUser } from "../context/UserContext";
 import LanguageSelector from "./LanguageSelector";
 import { useTranslation } from "react-i18next";
+import { useBranding } from "../context/BrandingContext";
 
 interface CompanyDashboardLayoutProps {
   children: React.ReactNode;
@@ -69,6 +70,7 @@ const roleColors: Record<string, { gradient: string; badge: string; textKey: str
 
 const CompanyDashboardLayout: React.FC<CompanyDashboardLayoutProps> = ({ children }) => {
   const { t } = useTranslation();
+  const { brandName, resolvedLogoUrl } = useBranding();
   const { setUser: setContextUser } = useUser();
   const [employee, setEmployee] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
@@ -167,14 +169,18 @@ const CompanyDashboardLayout: React.FC<CompanyDashboardLayoutProps> = ({ childre
             </svg>
           </button>
 
-          <div className={`w-8 h-8 bg-gradient-to-br ${colors.gradient} rounded-lg flex items-center justify-center flex-shrink-0`}>
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
+          {resolvedLogoUrl ? (
+            <img src={resolvedLogoUrl} alt={brandName} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+          ) : (
+            <div className={`w-8 h-8 bg-gradient-to-br ${colors.gradient} rounded-lg flex items-center justify-center flex-shrink-0`}>
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          )}
 
           <span className="text-[22px] font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
-            TimeTrack Pro
+            {brandName}
           </span>
 
           {/* Company logo and name */}

@@ -64,7 +64,7 @@ class ReportPdfBuilder {
   }
 
   private get brandName(): string {
-    return this.branding.brandName || "Time Tracker Pro";
+    return this.branding.brandName || "SoftDesk";
   }
 
   // ── Page Management ──────────────────────────────────────────────────────

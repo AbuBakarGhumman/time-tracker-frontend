@@ -1,5 +1,5 @@
 /**
- * Timezone-aware date utilities for Time Tracker Pro.
+ * Timezone-aware date utilities for SoftDesk.
  *
  * All formatting functions read the user's timezone from storage (set when
  * settings are loaded / saved).  The PKT-named exports are kept for

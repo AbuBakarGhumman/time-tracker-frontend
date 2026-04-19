@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getStoredToken, getStoredUser, logout, getUserType, getStoredEmployee } from "../api/auth";
 import { useUser } from "../context/UserContext";
 import { API_BASE_URL } from "../api/config";
+import { useBranding } from "../context/BrandingContext";
 
 interface UserProfile {
   full_name: string;
@@ -11,6 +12,7 @@ interface UserProfile {
 }
 
 const Header: React.FC = () => {
+  const { brandName, resolvedLogoUrl } = useBranding();
   const { user: contextUser } = useUser();
   const { t } = useTranslation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -19,7 +21,20 @@ const Header: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
   const [dashboardLink, setDashboardLink] = useState("/dashboard");
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsProfileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const getRoleBasedDashboardLink = (role: string): string => {
     const roleMap: Record<string, string> = {
@@ -32,13 +47,11 @@ const Header: React.FC = () => {
     return roleMap[role] || "/company/employee-dashboard";
   };
 
-  // Construct image URL directly from user data (no fetching needed)
   const getProfileImageUrl = (url: string | undefined): string | undefined => {
     if (!url) return undefined;
     return `${API_BASE_URL}${url}`;
   };
 
-  // Update user profile from context when it changes (e.g., after profile update)
   useEffect(() => {
     if (contextUser) {
       setUserProfile({
@@ -48,16 +61,14 @@ const Header: React.FC = () => {
     }
   }, [contextUser?.id, contextUser?.profile_pic_url]);
 
-  // Set up login state and dashboard link based on user type
   useEffect(() => {
     const token = getStoredToken();
     setIsLoggedIn(!!token);
-    
+
     if (token) {
       const currentUserType = getUserType();
       setUserType(currentUserType);
 
-      // Handle individual user
       if (currentUserType === "individual") {
         const storedUser = contextUser || getStoredUser();
         if (storedUser) {
@@ -67,22 +78,25 @@ const Header: React.FC = () => {
           });
         }
         setDashboardLink("/dashboard");
-      }
-      // Handle company employee
-      else if (currentUserType === "employee") {
+      } else if (currentUserType === "employee") {
         const storedEmployee = getStoredEmployee();
         if (storedEmployee) {
           setUserProfile({
             full_name: storedEmployee.full_name,
             profile_pic_url: getProfileImageUrl(storedEmployee.profile_pic_url)
           });
-          // Route to the correct company dashboard based on role
-          const dashLink = getRoleBasedDashboardLink(storedEmployee.company_role);
-          setDashboardLink(dashLink);
+          setDashboardLink(getRoleBasedDashboardLink(storedEmployee.company_role));
         }
       }
     }
   }, [contextUser?.id]);
+
+  const handleHashNav = (e: React.MouseEvent, hash: string) => {
+    if (location.pathname === "/home") {
+      e.preventDefault();
+      document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -92,170 +106,233 @@ const Header: React.FC = () => {
     setDashboardLink("/dashboard");
     navigate("/home");
   };
+
   return (
-    <header className="bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 sticky top-0 z-50 border-b border-white/10">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
-        {/* Logo */}
-        <Link to="/home" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            {t("common.appName")}
-          </span>
-        </Link>
+    <header className={`bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 transition-shadow duration-300 ${scrolled ? "header-scrolled" : ""}`}>
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          {isLoggedIn ? (
-            <div className="flex items-center gap-6">
-              <Link 
-                to={dashboardLink} 
-                className="text-slate-300 hover:text-white transition-colors duration-200 font-medium"
-              >
-                {t("common.dashboard")}
-              </Link>
-              
-              {/* Profile Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center gap-3 group"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden border-2 border-white/20 group-hover:border-white/40 transition-all duration-300 group-hover:scale-110">
-                    {userProfile?.profile_pic_url ? (
-                      <img 
-                        src={userProfile.profile_pic_url} 
-                        alt={userProfile.full_name || "User"} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    )}
-                  </div>
-                </button>
-
-                {/* Dropdown Menu */}
-                {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden z-50">
-                    <div className="px-4 py-3 border-b border-slate-700">
-                      <p className="text-sm font-semibold text-white">{userProfile?.full_name}</p>
-                      <p className="text-xs text-slate-400">{userType === "individual" ? t("common.individual") : t("common.companyEmployee")}</p>
-                    </div>
-                    <Link
-                      to={dashboardLink}
-                      className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                    >
-                      {t("common.dashboard")}
-                    </Link>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors border-t border-slate-700"
-                    >
-                      {t("common.logout")}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <>
-              <Link 
-                to="/login" 
-                className="text-slate-300 hover:text-white transition-colors duration-200 font-medium"
-              >
-                {t("common.login")}
-              </Link>
-              <Link
-                to="/register"
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/50"
-              >
-                {t("common.register")}
-              </Link>
-            </>
-          )}
-        </nav>
-
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {isMobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          {/* ── Logo ── */}
+          <Link to="/home" className="flex items-center gap-3 group flex-shrink-0">
+            {resolvedLogoUrl ? (
+              <img
+                src={resolvedLogoUrl}
+                alt={brandName}
+                className="w-8 h-8 rounded-lg object-contain flex-shrink-0"
+              />
             ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-violet-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-200 shadow-sm shadow-blue-500/20">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             )}
-          </svg>
-        </button>
-      </div>
+            <span className="text-slate-900 font-bold text-xl tracking-tight">
+              {brandName}
+            </span>
+          </Link>
 
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden mt-4 pb-4 border-t border-white/10">
-          <nav className="flex flex-col gap-3 mt-4">
+          {/* ── Desktop Nav ── */}
+          <nav className="hidden md:flex items-center gap-8">
             {isLoggedIn ? (
-              <>
-                <Link 
-                  to={dashboardLink} 
-                  className="text-slate-300 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-3"
-                  onClick={() => setIsMobileMenuOpen(false)}
+              <div className="flex items-center gap-6">
+                <Link
+                  to={dashboardLink}
+                  className="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden border-2 border-white/20">
-                    {userProfile?.profile_pic_url ? (
-                      <img 
-                        src={userProfile.profile_pic_url} 
-                        alt={userProfile.full_name || "User"} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    )}
-                  </div>
                   {t("common.dashboard")}
                 </Link>
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="text-left text-red-400 hover:text-red-300 hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-200 font-medium border-t border-white/10 mt-2 pt-3"
-                >
-                  {t("common.logout")}
-                </button>
-              </>
+
+                {/* Profile Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    className="flex items-center gap-2 group"
+                    aria-expanded={isProfileMenuOpen}
+                  >
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center overflow-hidden border-2 border-slate-200 group-hover:border-blue-300 transition-all duration-200">
+                      {userProfile?.profile_pic_url ? (
+                        <img
+                          src={userProfile.profile_pic_url}
+                          alt={userProfile.full_name || "User"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      )}
+                    </div>
+                    <svg
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isProfileMenuOpen ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 mt-3 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+                      <div className="px-4 py-3 border-b border-slate-100">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{userProfile?.full_name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {userType === "individual" ? t("common.individual") : t("common.companyEmployee")}
+                        </p>
+                      </div>
+                      <Link
+                        to={dashboardLink}
+                        className="flex items-center gap-2.5 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        {t("common.dashboard")}
+                      </Link>
+                      <button
+                        onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors border-t border-slate-100"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        {t("common.logout")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
-              <>
-                <Link 
-                  to="/login" 
-                  className="text-slate-300 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-200"
-                  onClick={() => setIsMobileMenuOpen(false)}
+              <div className="flex items-center gap-1">
+                {[
+                  { label: "Features",     to: "/home#features",   hash: "#features" },
+                  { label: "How It Works", to: "/home#howitworks", hash: "#howitworks" },
+                  { label: "Pricing",      to: "/home#pricing",    hash: "#pricing" },
+                  { label: "About",        to: "/about",           hash: null },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.to}
+                    onClick={item.hash ? (e) => handleHashNav(e, item.hash!) : undefined}
+                    className="px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium text-sm rounded-lg transition-all duration-150"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <div className="w-px h-5 bg-slate-200 mx-3" />
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-slate-700 hover:text-slate-900 font-medium text-sm rounded-lg transition-colors"
                 >
                   {t("common.login")}
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg transition-all duration-200 text-center"
+                  className="ml-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-xl font-semibold hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200"
+                >
+                  Get Started
+                </Link>
+              </div>
+            )}
+          </nav>
+
+          {/* ── Mobile Menu Button ── */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Mobile Menu ── */}
+      <div
+        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
+      >
+        <div className="bg-white border-t border-slate-200 px-6 py-4">
+          <nav className="flex flex-col gap-1">
+            {isLoggedIn ? (
+              <>
+                <Link
+                  to={dashboardLink}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  {t("common.register")}
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center overflow-hidden border-2 border-slate-200 flex-shrink-0">
+                    {userProfile?.profile_pic_url ? (
+                      <img src={userProfile.profile_pic_url} alt={userProfile.full_name || "User"} className="w-full h-full object-cover" />
+                    ) : (
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">{userProfile?.full_name}</div>
+                    <div className="text-xs text-slate-500">{t("common.dashboard")}</div>
+                  </div>
                 </Link>
+                <button
+                  onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors mt-1 border-t border-slate-100 pt-4 text-left"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span className="text-sm font-medium">{t("common.logout")}</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {[
+                  { label: "Features",     to: "/home#features",   hash: "#features" },
+                  { label: "How It Works", to: "/home#howitworks", hash: "#howitworks" },
+                  { label: "Pricing",      to: "/home#pricing",    hash: "#pricing" },
+                  { label: "About",        to: "/about",           hash: null },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.to}
+                    className="px-3 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+                    onClick={(e) => {
+                      setIsMobileMenuOpen(false);
+                      if (item.hash) handleHashNav(e, item.hash);
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <div className="border-t border-slate-100 mt-2 pt-2 flex flex-col gap-2">
+                  <Link
+                    to="/login"
+                    className="px-3 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {t("common.login")}
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-xl font-semibold text-center transition-all duration-200"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Get Started
+                  </Link>
+                </div>
               </>
             )}
           </nav>
         </div>
-      )}
+      </div>
     </header>
   );
 };

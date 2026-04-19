@@ -9,6 +9,7 @@ import LanguageSelector from "./LanguageSelector";
 import AIAssistantButton from "./ai/AIAssistantButton";
 import { useAIAssistant } from "../context/AIAssistantContext";
 import { useTranslation } from "react-i18next";
+import { useBranding } from "../context/BrandingContext";
 import axios from "../api/interceptor";
 import { setStoredTimezone } from "../utils/dateUtils";
 import CacheManager from "../utils/cacheManager";
@@ -20,6 +21,7 @@ interface DashboardLayoutProps {
 const LG_BREAKPOINT_PX = 1024;
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  const { brandName, resolvedLogoUrl } = useBranding();
   const { user: contextUser, setUser: setContextUser } = useUser();
   const [user, setUser] = useState<User | null>(contextUser);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -197,19 +199,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </svg>
           </button>
 
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
+          {resolvedLogoUrl ? (
+            <img src={resolvedLogoUrl} alt={brandName} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          )}
 
           <span className="text-[22px] font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
-            TimeTrack Pro
+            {brandName}
           </span>
         </div>
 
