@@ -667,9 +667,9 @@ const TermsOfService: React.FC = () => {
               Delaware 19801, United States
             </li>
           </ul>
-          <P className="mt-4 italic text-slate-400 text-[clamp(0.75rem,0.9vw,2.5rem)]">
+          <p className="mt-4 italic text-slate-400 text-[clamp(0.75rem,0.9vw,2.5rem)]">
             We aim to respond to all legal inquiries within 5 business days.
-          </P>
+          </p>
         </div>
       ),
     },

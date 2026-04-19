@@ -25,8 +25,6 @@ const rl = (inView: boolean, extra = "") =>
   `transition-all duration-700 ease-out ${extra} ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-14"}`;
 const rr = (inView: boolean, extra = "") =>
   `transition-all duration-700 ease-out ${extra} ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-14"}`;
-const rs = (inView: boolean, extra = "") =>
-  `transition-all duration-700 ease-out ${extra} ${inView ? "opacity-100 scale-100" : "opacity-0 scale-90"}`;
 
 const CheckIcon = () => (
   <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
