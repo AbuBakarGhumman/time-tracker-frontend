@@ -394,60 +394,6 @@ const Reports: React.FC = () => {
           </div>
         </div>
 
-        {/* Daily Breakdown Table */}
-        <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-            <h2 className="text-lg font-bold text-slate-900">Daily Breakdown</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Check-in</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Check-out</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Hours</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Punctuality</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Overtime</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {attendanceData.daily_breakdown.slice().reverse().map((day) => (
-                  <tr key={day.date} className="hover:bg-slate-50">
-                    <td className="px-6 py-3 text-sm text-slate-900 font-medium">
-                      {formatPKTLocalDateOnly(day.date, { weekday: "short", month: "short", day: "numeric" })}
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${day.present ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                        {day.present ? "Present" : "Absent"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-sm text-slate-700">{day.checkin_time || "—"}</td>
-                    <td className="px-6 py-3 text-sm text-slate-700">{day.checkout_time || "—"}</td>
-                    <td className="px-6 py-3 text-sm text-slate-700 font-medium">
-                      {day.present ? formatHoursAsHoursMinutes(day.hours) : "—"}
-                    </td>
-                    <td className="px-6 py-3">
-                      {day.present ? (
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${day.is_late ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
-                          {day.is_late ? "Late" : "On Time"}
-                        </span>
-                      ) : "—"}
-                    </td>
-                    <td className="px-6 py-3">
-                      {day.present ? (
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${day.is_overtime ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
-                          {day.is_overtime ? "Yes" : "No"}
-                        </span>
-                      ) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </>
     );
   };
@@ -470,6 +416,18 @@ const Reports: React.FC = () => {
       nonBillable: Number(r.non_billable_hours.toFixed(2)),
       tasks: r.tasks_completed,
     }));
+
+    const categoryAgg = (() => {
+      const map = new Map<string, number>();
+      workReports.forEach((r) => {
+        r.category_breakdown.forEach(({ category, hours }) => {
+          map.set(category, (map.get(category) ?? 0) + hours);
+        });
+      });
+      return Array.from(map.entries())
+        .map(([category, hours], i) => ({ category, hours: Number(hours.toFixed(2)), color: COLORS[i % COLORS.length] }))
+        .sort((a, b) => b.hours - a.hours);
+    })();
 
     const totalHours = workReports.reduce((sum, r) => sum + r.total_hours, 0);
     const totalBillable = workReports.reduce((sum, r) => sum + r.billable_hours, 0);
@@ -526,40 +484,50 @@ const Reports: React.FC = () => {
           </div>
         </div>
 
-        {/* Daily Breakdown Table */}
-        <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-            <h2 className="text-lg font-bold text-slate-900">Daily Work Breakdown</h2>
+        {/* Hours by Category */}
+        {categoryAgg.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+              <h2 className="text-lg font-bold mb-4 text-slate-900">Hours by Category</h2>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={categoryAgg} cx="50%" cy="50%" outerRadius={90} dataKey="hours"
+                    labelLine={false}
+                    label={({ category, percent }: any) => `${category}: ${(percent * 100).toFixed(0)}%`}>
+                    {categoryAgg.map((c, i) => <Cell key={i} fill={c.color} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => formatHoursAsHoursMinutes(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+              <h2 className="text-lg font-bold mb-4 text-slate-900">Category Breakdown</h2>
+              <div className="space-y-3">
+                {categoryAgg.map((c, i) => {
+                  const totalCatHours = categoryAgg.reduce((s, x) => s + x.hours, 0);
+                  const pct = totalCatHours > 0 ? (c.hours / totalCatHours) * 100 : 0;
+                  return (
+                    <div key={c.category}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                          <span className="text-sm font-medium text-slate-700">{c.category}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-slate-900">{formatHoursAsHoursMinutes(c.hours)}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Billable</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Tasks</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Top Project</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {workReports.slice().reverse().map((report) => (
-                  <tr key={report.date} className="hover:bg-slate-50">
-                    <td className="px-6 py-3 text-sm text-slate-900 font-medium">
-                      {formatPKTLocalDateOnly(report.date, { weekday: "short", month: "short", day: "numeric" })}
-                    </td>
-                    <td className="px-6 py-3 text-sm text-slate-700">{formatHoursAsHoursMinutes(report.total_hours)}</td>
-                    <td className="px-6 py-3 text-sm text-green-700 font-medium">{formatHoursAsHoursMinutes(report.billable_hours)}</td>
-                    <td className="px-6 py-3 text-sm text-slate-700">{report.tasks_completed}</td>
-                    <td className="px-6 py-3 text-sm text-slate-700">
-                      {report.projects.length > 0 ? report.projects[0].project_name : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        )}
+
       </>
     );
   };
@@ -830,7 +798,7 @@ const Reports: React.FC = () => {
       total_entries, total_hours, billable_hours, non_billable_hours,
       billable_ratio, avg_entry_duration,
       categories, peak_hours, daily_avg_hours, daily_avg_entries,
-      longest_entry_hours,
+      longest_entry_hours, shortest_entry_hours,
     } = productivityData;
 
     const categoryChartData = categories.map((c, i) => ({
@@ -852,15 +820,19 @@ const Reports: React.FC = () => {
     return (
       <>
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <StatCard label="Total Entries" value={total_entries}
             subtitle={`${daily_avg_entries} avg/day`} bgClass="bg-blue-50" />
           <StatCard label="Total Hours" value={formatHoursAsHoursMinutes(total_hours)}
             subtitle={`${formatHoursAsHoursMinutes(daily_avg_hours)} avg/day`} bgClass="bg-purple-50" />
           <StatCard label="Billable Ratio" value={`${billable_ratio.toFixed(0)}%`}
             subtitle={`${formatHoursAsHoursMinutes(billable_hours)} billable`} bgClass="bg-green-50" />
-          <StatCard label="Avg Entry Duration" value={formatHoursAsHoursMinutes(avg_entry_duration)}
-            subtitle={`Longest: ${formatHoursAsHoursMinutes(longest_entry_hours)}`} bgClass="bg-amber-50" />
+          <StatCard label="Avg Duration" value={formatHoursAsHoursMinutes(avg_entry_duration)}
+            subtitle="Per entry" bgClass="bg-amber-50" />
+          <StatCard label="Longest Entry" value={formatHoursAsHoursMinutes(longest_entry_hours)}
+            bgClass="bg-orange-50" />
+          <StatCard label="Shortest Entry" value={formatHoursAsHoursMinutes(shortest_entry_hours)}
+            bgClass="bg-slate-50" />
         </div>
 
         {/* Charts */}
@@ -969,10 +941,12 @@ const Reports: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           {[1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <SkeletonChart height="h-64" /><SkeletonChart height="h-64" /><SkeletonChart height="h-64" />
         </div>
-        <SkeletonTable rows={7} />
       </>
     );
     if (reportType === "work") return (
@@ -983,7 +957,9 @@ const Reports: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <SkeletonChart height="h-72" /><SkeletonChart height="h-72" />
         </div>
-        <SkeletonTable rows={7} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonChart height="h-72" /><SkeletonChart height="h-72" />
+        </div>
       </>
     );
     if (reportType === "projects") return (
@@ -1011,8 +987,8 @@ const Reports: React.FC = () => {
     // productivity
     return (
       <>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <SkeletonChart height="h-64" /><SkeletonChart height="h-64" /><SkeletonChart height="h-64" />

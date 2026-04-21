@@ -340,34 +340,34 @@ const Analytics: React.FC = () => {
       <>
         {/* Weekly Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Total Hours</p>
-            <p className="text-3xl font-bold text-blue-600 mt-2">
+          <div className="bg-blue-50 rounded-xl shadow-md border border-blue-100 p-5">
+            <p className="text-xs font-bold text-blue-600 uppercase">Total Hours</p>
+            <p className="text-3xl font-bold text-blue-700 mt-2">
               {formatHoursAsHoursMinutes(weeklyTrend.total_work_hours)}
             </p>
-            <p className="text-xs text-slate-500 mt-1">This week</p>
+            <p className="text-xs text-blue-500 mt-1">This week</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Duties Done</p>
-            <p className="text-3xl font-bold text-green-600 mt-2">
+          <div className="bg-emerald-50 rounded-xl shadow-md border border-emerald-100 p-5">
+            <p className="text-xs font-bold text-emerald-600 uppercase">Duties Done</p>
+            <p className="text-3xl font-bold text-emerald-700 mt-2">
               {weeklyTrend.days_completed_duty}/7
             </p>
-            <p className="text-xs text-slate-500 mt-1">Days with 9+ hours</p>
+            <p className="text-xs text-emerald-500 mt-1">Days completed</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Late Check-ins</p>
-            <p className="text-3xl font-bold text-orange-600 mt-2">{weeklyTrend.days_late}</p>
-            <p className="text-xs text-slate-500 mt-1">Days</p>
+          <div className="bg-amber-50 rounded-xl shadow-md border border-amber-100 p-5">
+            <p className="text-xs font-bold text-amber-600 uppercase">Late Check-ins</p>
+            <p className="text-3xl font-bold text-amber-700 mt-2">{weeklyTrend.days_late}</p>
+            <p className="text-xs text-amber-500 mt-1">Days late</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Daily Average</p>
-            <p className="text-3xl font-bold text-purple-600 mt-2">
+          <div className="bg-violet-50 rounded-xl shadow-md border border-violet-100 p-5">
+            <p className="text-xs font-bold text-violet-600 uppercase">Daily Average</p>
+            <p className="text-3xl font-bold text-violet-700 mt-2">
               {formatHoursAsHoursMinutes(weeklyTrend.average_daily_hours)}
             </p>
-            <p className="text-xs text-slate-500 mt-1">Per day</p>
+            <p className="text-xs text-violet-500 mt-1">Per day</p>
           </div>
         </div>
 
@@ -567,32 +567,32 @@ const Analytics: React.FC = () => {
       <>
         {/* Monthly Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Total Hours</p>
-            <p className="text-3xl font-bold text-blue-600 mt-2">
+          <div className="bg-blue-50 rounded-xl shadow-md border border-blue-100 p-5">
+            <p className="text-xs font-bold text-blue-600 uppercase">Total Hours</p>
+            <p className="text-3xl font-bold text-blue-700 mt-2">
               {formatHoursAsHoursMinutes(monthlyStats.total_hours)}
             </p>
-            <p className="text-xs text-slate-500 mt-1">{monthlyStats.month}</p>
+            <p className="text-xs text-blue-500 mt-1">{monthlyStats.month}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Days Worked</p>
-            <p className="text-3xl font-bold text-green-600 mt-2">{monthlyStats.days_worked}</p>
-            <p className="text-xs text-slate-500 mt-1">Active days</p>
+          <div className="bg-emerald-50 rounded-xl shadow-md border border-emerald-100 p-5">
+            <p className="text-xs font-bold text-emerald-600 uppercase">Days Worked</p>
+            <p className="text-3xl font-bold text-emerald-700 mt-2">{monthlyStats.days_worked}</p>
+            <p className="text-xs text-emerald-500 mt-1">Active days</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Daily Average</p>
-            <p className="text-3xl font-bold text-purple-600 mt-2">
+          <div className="bg-violet-50 rounded-xl shadow-md border border-violet-100 p-5">
+            <p className="text-xs font-bold text-violet-600 uppercase">Daily Average</p>
+            <p className="text-3xl font-bold text-violet-700 mt-2">
               {formatHoursAsHoursMinutes(monthlyStats.avg_daily_hours)}
             </p>
-            <p className="text-xs text-slate-500 mt-1">Per day</p>
+            <p className="text-xs text-violet-500 mt-1">Per day</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
-            <p className="text-xs font-bold text-slate-600 uppercase">Period</p>
-            <p className="text-lg font-bold text-slate-900 mt-2">{monthlyStats.month}</p>
-            <p className="text-xs text-slate-500 mt-1">Selected month</p>
+          <div className="bg-slate-50 rounded-xl shadow-md border border-slate-200 p-5">
+            <p className="text-xs font-bold text-slate-500 uppercase">Period</p>
+            <p className="text-lg font-bold text-slate-800 mt-2">{monthlyStats.month}</p>
+            <p className="text-xs text-slate-400 mt-1">Selected month</p>
           </div>
         </div>
 
@@ -633,37 +633,22 @@ const Analytics: React.FC = () => {
   return (
     <div className="p-1">
       {/* View Type Selector */}
-      <div className="flex gap-3 mb-6 flex-wrap">
-        <button
-          onClick={() => setViewType("daily")}
-          className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${
-            viewType === "daily"
-              ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
-          }`}
-        >
-          Daily
-        </button>
-        <button
-          onClick={() => setViewType("weekly")}
-          className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${
-            viewType === "weekly"
-              ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
-          }`}
-        >
-          Weekly
-        </button>
-        <button
-          onClick={() => setViewType("monthly")}
-          className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${
-            viewType === "monthly"
-              ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
-          }`}
-        >
-          Monthly
-        </button>
+      <div className="flex items-center mb-6">
+        <div className="inline-flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm gap-1">
+          {(["daily", "weekly", "monthly"] as ViewType[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setViewType(v)}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition-all duration-200 ${
+                viewType === v
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
